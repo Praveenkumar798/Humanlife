@@ -1,0 +1,31 @@
+# =============================================================================
+# Human Legacy AI - Docker Compose
+# =============================================================================
+# Provides PostgreSQL 16 with pgvector extension.
+# Backend and frontend run locally during development.
+# =============================================================================
+
+services:
+  # PostgreSQL database with pgvector extension
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: humanlegacy_postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-humanlegacy}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-humanlegacy_dev_pass}
+      POSTGRES_DB: ${POSTGRES_DB:-humanlegacy_db}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-humanlegacy} -d ${POSTGRES_DB:-humanlegacy_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+    driver: local
+
