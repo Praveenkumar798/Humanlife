@@ -145,3 +145,4 @@ async def delete_memory(
     await db.delete(memory)
     await db.commit()
     return True
+

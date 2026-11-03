@@ -62,3 +62,4 @@ class MemoryListResponse(BaseModel):
     items: List[MemoryResponse]
     page: int
     page_size: int
+
