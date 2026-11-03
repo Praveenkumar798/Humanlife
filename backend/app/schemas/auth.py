@@ -41,3 +41,4 @@ class UserResponse(BaseModel):
 class MessageResponse(BaseModel):
     """Standard message response."""
     message: str
+

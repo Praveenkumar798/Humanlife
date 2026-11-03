@@ -124,3 +124,4 @@ async def authenticate_user(
         return None
 
     return user
+
