@@ -133,3 +133,4 @@ async def websocket_chat_endpoint(websocket: WebSocket):
             })
         except Exception:
             pass
+
