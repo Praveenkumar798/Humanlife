@@ -116,3 +116,4 @@ async def voice_query_fallback_endpoint(
     )
 
     return response
+

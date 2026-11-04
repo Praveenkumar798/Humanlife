@@ -43,3 +43,4 @@ class VoiceQueryResponse(BaseModel):
     conversation_id: uuid.UUID
     message_id: uuid.UUID
     created_at: datetime
+

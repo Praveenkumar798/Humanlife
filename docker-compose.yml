@@ -1,12 +1,17 @@
 # =============================================================================
-# Human Legacy AI - Docker Compose
+# Human Legacy AI - Full-Stack Production Docker Compose
 # =============================================================================
-# Provides PostgreSQL 16 with pgvector extension.
-# Backend and frontend run locally during development.
+# Runs the entire Human Legacy AI stack in containers:
+#   1. PostgreSQL 16 with pgvector vector database
+#   2. FastAPI Backend with Gemini RAG & WebSocket Live Streams
+#   3. React SPA Frontend served with Nginx reverse proxy
+#
+# Launch command:
+#   docker compose up --build -d
 # =============================================================================
 
 services:
-  # PostgreSQL database with pgvector extension
+  # 1. Vector Database (PostgreSQL 16 + pgvector)
   postgres:
     image: pgvector/pgvector:pg16
     container_name: humanlegacy_postgres
@@ -20,12 +25,57 @@ services:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-humanlegacy} -d ${POSTGRES_DB:-humanlegacy_db}"]
-      interval: 10s
+      interval: 5s
       timeout: 5s
       retries: 5
+    restart: unless-stopped
+
+  # 2. FastAPI Backend (RAG, Gemini LLM, WebSockets)
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: humanlegacy_backend
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-humanlegacy}:${POSTGRES_PASSWORD:-humanlegacy_dev_pass}@postgres:5432/${POSTGRES_DB:-humanlegacy_db}
+      DATABASE_URL_SYNC: postgresql+psycopg2://${POSTGRES_USER:-humanlegacy}:${POSTGRES_PASSWORD:-humanlegacy_dev_pass}@postgres:5432/${POSTGRES_DB:-humanlegacy_db}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-dev-secret-key-change-in-production-use-long-random-string}
+      JWT_ALGORITHM: HS256
+      JWT_EXPIRATION_MINUTES: 1440
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_LLM_MODEL: ${GEMINI_LLM_MODEL:-gemini-2.0-flash}
+      GEMINI_EMBEDDING_MODEL: ${GEMINI_EMBEDDING_MODEL:-text-embedding-004}
+      GEMINI_LIVE_MODEL: ${GEMINI_LIVE_MODEL:-gemini-2.0-flash-live-001}
+      EMBEDDING_DIMENSIONS: 768
+      RAG_TOP_K: 5
+      RAG_SIMILARITY_THRESHOLD: 0.7
+      MAX_UPLOAD_SIZE_MB: 50
+      CORS_ORIGINS: "http://localhost:5173,http://localhost:3000,http://localhost:80,http://frontend:80"
+      APP_ENV: production
+      APP_DEBUG: "false"
+    ports:
+      - "8000:8000"
+    volumes:
+      - backend_uploads:/app/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # 3. Modern React Frontend (Nginx SPA + Reverse Proxy)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: humanlegacy_frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
     restart: unless-stopped
 
 volumes:
   postgres_data:
     driver: local
-
+  backend_uploads:
+    driver: local

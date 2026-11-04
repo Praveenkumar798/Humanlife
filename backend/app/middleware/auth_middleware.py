@@ -6,6 +6,7 @@ Provides cookie helper functions with secure production flags.
 """
 
 import uuid
+import inspect
 from typing import Optional
 from fastapi import Request, Response, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -93,6 +94,8 @@ async def get_current_user(
     stmt = select(User).where(User.id == user_id)
     result = await db.execute(stmt)
     user = result.scalar_one_or_none()
+    if inspect.isawaitable(user):
+        user = await user
 
     if not user:
         raise HTTPException(
