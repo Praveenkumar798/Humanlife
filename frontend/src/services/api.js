@@ -89,5 +89,28 @@ export const api = {
     getConversation: (id) => request(`/api/conversations/${id}`, { method: 'GET' }),
     deleteConversation: (id) => request(`/api/conversations/${id}`, { method: 'DELETE' }),
   },
+
+  // Voice Fallback
+  voice: {
+    transcribe: (file) => {
+      const fd = new FormData();
+      fd.append('file', file);
+      return request('/api/voice/transcribe', { method: 'POST', body: fd });
+    },
+    synthesize: (text, voice_name = 'Aoede') => {
+      return request('/api/voice/synthesize', {
+        method: 'POST',
+        body: JSON.stringify({ text, voice_name }),
+      });
+    },
+    query: ({ audio, text, conversation_id, voice_name = 'Aoede' }) => {
+      const fd = new FormData();
+      if (audio) fd.append('audio', audio);
+      if (text) fd.append('text', text);
+      if (conversation_id) fd.append('conversation_id', conversation_id);
+      if (voice_name) fd.append('voice_name', voice_name);
+      return request('/api/voice/query', { method: 'POST', body: fd });
+    },
+  },
 };
 

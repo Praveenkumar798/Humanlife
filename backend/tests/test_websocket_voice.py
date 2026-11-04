@@ -187,3 +187,4 @@ def test_voice_ws_fallback_signal(voice_user, voice_token):
             fallback = ws.receive_json()
             assert fallback["type"] == "fallback_needed"
             assert "Live API preview model unavailable" in fallback["reason"]
+
