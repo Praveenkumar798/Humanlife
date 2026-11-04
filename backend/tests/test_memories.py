@@ -62,6 +62,9 @@ def test_create_memory_service(current_user):
     """Test memory creation with all Blueprint-informed fields."""
     mock_db = AsyncMock()
     mock_db.add = MagicMock()
+    mock_exec_res = MagicMock()
+    mock_exec_res.scalars.return_value.all.return_value = []
+    mock_db.execute.return_value = mock_exec_res
 
     req_data = MemoryCreateRequest(
         title="Learning to code with grandfather",
@@ -244,6 +247,9 @@ def test_memory_router_endpoints(current_user):
     from datetime import datetime, timezone
     mock_db = AsyncMock()
     mock_db.add = MagicMock()
+    mock_exec_res = MagicMock()
+    mock_exec_res.scalars.return_value.all.return_value = []
+    mock_db.execute.return_value = mock_exec_res
 
     # Test create endpoint
     req = MemoryCreateRequest(

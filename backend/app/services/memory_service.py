@@ -6,7 +6,6 @@ CRUD operations for user personal memories with strict user-level ownership isol
 
 import os
 import uuid
-import inspect
 from datetime import datetime, timezone
 from typing import Optional, Tuple, List
 from sqlalchemy import select, func, or_, desc
@@ -35,18 +34,12 @@ async def _sync_memory_chunks(
         existing_chunks_stmt = select(MemoryChunk).where(MemoryChunk.memory_id == memory_id)
         result = await db.execute(existing_chunks_stmt)
         if hasattr(result, "scalars"):
-            sc = result.scalars
-            if callable(sc):
-                sc_res = sc()
-                if inspect.isawaitable(sc_res):
-                    sc_res = await sc_res
-                if hasattr(sc_res, "all"):
-                    chunks_to_del = sc_res.all()
-                    if inspect.isawaitable(chunks_to_del):
-                        chunks_to_del = await chunks_to_del
-                    if isinstance(chunks_to_del, (list, tuple)):
-                        for chk in chunks_to_del:
-                            await db.delete(chk)
+            sc = result.scalars()
+            if hasattr(sc, "all"):
+                chunks_to_del = sc.all()
+                if not hasattr(chunks_to_del, "__await__"):
+                    for chk in chunks_to_del:
+                        await db.delete(chk)
     except Exception as e:
         print(f"⚠️ Warning: Could not clean old chunks: {e}")
 

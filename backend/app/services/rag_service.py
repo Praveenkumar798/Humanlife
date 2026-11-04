@@ -7,7 +7,8 @@ to generate source-cited answers without hallucination.
 """
 
 import uuid
-from typing import List, Tuple, Optional
+import inspect
+from typing import List, Tuple, Optional, AsyncGenerator
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import HTTPException
@@ -160,6 +161,76 @@ async def generate_grounded_answer(
         raise HTTPException(
             status_code=502,
             detail=f"Failed to generate answer from Gemini model: {str(e)}",
+        )
+
+
+async def generate_grounded_answer_stream(
+    question: str,
+    citations: List[SourceCitation],
+) -> AsyncGenerator[str, None]:
+    """
+    Stream grounded answer tokens from Gemini LLM.
+    If no relevant chunks exist, yields standard fallback string directly.
+    Supports both async iterator and generator fallback.
+    """
+    if not citations:
+        yield FALLBACK_INSUFFICIENT_INFO
+        return
+
+    prompt = construct_rag_prompt(question, citations)
+    client = get_gemini_client()
+
+    try:
+        # Check async client.aio first
+        if hasattr(client, "aio") and hasattr(client.aio, "models"):
+            stream = client.aio.models.generate_content_stream(
+                model=settings.GEMINI_LLM_MODEL,
+                contents=prompt,
+            )
+            if inspect.isawaitable(stream):
+                stream = await stream
+
+            if hasattr(stream, "__aiter__"):
+                async for chunk in stream:
+                    txt = getattr(chunk, "text", "") or ""
+                    if txt:
+                        yield txt
+                return
+            elif hasattr(stream, "__iter__"):
+                for chunk in stream:
+                    txt = getattr(chunk, "text", "") or ""
+                    if txt:
+                        yield txt
+                return
+
+        # Fallback to sync client.models.generate_content_stream
+        if hasattr(client, "models") and hasattr(client.models, "generate_content_stream"):
+            sync_stream = client.models.generate_content_stream(
+                model=settings.GEMINI_LLM_MODEL,
+                contents=prompt,
+            )
+            for chunk in sync_stream:
+                txt = getattr(chunk, "text", "") or ""
+                if txt:
+                    yield txt
+            return
+
+        # Fallback to regular non-streaming call
+        res = client.models.generate_content(
+            model=settings.GEMINI_LLM_MODEL,
+            contents=prompt,
+        )
+        if res and res.text:
+            yield res.text
+        else:
+            yield FALLBACK_INSUFFICIENT_INFO
+
+    except Exception as e:
+        if isinstance(e, HTTPException):
+            raise e
+        raise HTTPException(
+            status_code=502,
+            detail=f"Failed to stream answer from Gemini model: {str(e)}",
         )
 
 

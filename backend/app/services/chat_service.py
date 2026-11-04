@@ -7,12 +7,13 @@ and calls the RAG pipeline to generate grounded AI responses.
 
 import uuid
 from datetime import datetime, timezone
-from typing import Optional, List, Tuple
+from typing import Optional, List, Tuple, AsyncGenerator
 from sqlalchemy import select, desc, func
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import HTTPException, status
 
+from app.config import settings
 from app.models.conversation import Conversation, ConversationMessage
 from app.schemas.chat import (
     ChatRequest,
@@ -22,7 +23,13 @@ from app.schemas.chat import (
     ConversationDetailResponse,
     ConversationMessageResponse,
 )
-from app.services.rag_service import execute_rag_pipeline
+from app.services.embedding_service import generate_embedding
+from app.services.rag_service import (
+    execute_rag_pipeline,
+    search_relevant_chunks,
+    generate_grounded_answer_stream,
+    FALLBACK_INSUFFICIENT_INFO,
+)
 
 
 async def get_or_create_conversation(
@@ -223,3 +230,110 @@ async def delete_conversation(
     await db.delete(convo)
     await db.commit()
     return True
+
+
+async def stream_chat_rag(
+    db: AsyncSession,
+    user_id: uuid.UUID,
+    message: str,
+    conversation_id: Optional[uuid.UUID] = None,
+    top_k: Optional[int] = None,
+    similarity_threshold: Optional[float] = None,
+) -> AsyncGenerator[dict, None]:
+    """
+    Execute streaming RAG pipeline yielding incremental events:
+    1. {"type": "start", "conversation_id": ..., "user_message_id": ...}
+    2. {"type": "citations", "conversation_id": ..., "citations": [...]}
+    3. {"type": "chunk", "text": "..."} for each token from Gemini
+    4. {"type": "done", "conversation_id": ..., "message_id": ..., "full_text": ..., "is_grounded": bool}
+    """
+    clean_msg = message.strip()
+    if not clean_msg:
+        yield {"type": "error", "error": "Message cannot be empty."}
+        return
+
+    # 1. Retrieve or create conversation session
+    convo = await get_or_create_conversation(
+        db=db,
+        user_id=user_id,
+        conversation_id=conversation_id,
+        initial_title=clean_msg,
+    )
+
+    # 2. Save user message
+    user_msg = ConversationMessage(
+        id=uuid.uuid4(),
+        conversation_id=convo.id,
+        role="user",
+        content=clean_msg,
+        sources=None,
+        created_at=datetime.now(timezone.utc),
+    )
+    db.add(user_msg)
+    await db.flush()
+
+    yield {
+        "type": "start",
+        "conversation_id": str(convo.id),
+        "user_message_id": str(user_msg.id),
+    }
+
+    # 3. Vector retrieval
+    k = top_k or settings.RAG_TOP_K
+    thresh = similarity_threshold if similarity_threshold is not None else settings.RAG_SIMILARITY_THRESHOLD
+
+    try:
+        query_emb = await generate_embedding(clean_msg)
+        citations = await search_relevant_chunks(
+            db=db,
+            user_id=user_id,
+            query_embedding=query_emb,
+            top_k=k,
+            similarity_threshold=thresh,
+        )
+    except Exception as e:
+        citations = []
+
+    serialized_citations = [c.model_dump(mode="json") for c in citations]
+    yield {
+        "type": "citations",
+        "conversation_id": str(convo.id),
+        "citations": serialized_citations,
+    }
+
+    # 4. Stream tokens from Gemini LLM
+    full_text = ""
+    try:
+        async for token in generate_grounded_answer_stream(clean_msg, citations):
+            full_text += token
+            yield {"type": "chunk", "text": token}
+    except Exception as e:
+        yield {
+            "type": "error",
+            "error": f"Error during streaming generation: {str(e)}",
+        }
+        return
+
+    answer = full_text.strip()
+    is_grounded = bool(citations) and (FALLBACK_INSUFFICIENT_INFO not in answer)
+
+    # 5. Persist assistant message to database
+    assistant_msg = ConversationMessage(
+        id=uuid.uuid4(),
+        conversation_id=convo.id,
+        role="assistant",
+        content=answer,
+        sources=serialized_citations,
+        created_at=datetime.now(timezone.utc),
+    )
+    db.add(assistant_msg)
+    convo.updated_at = datetime.now(timezone.utc)
+    await db.commit()
+
+    yield {
+        "type": "done",
+        "conversation_id": str(convo.id),
+        "message_id": str(assistant_msg.id),
+        "full_text": answer,
+        "is_grounded": is_grounded,
+    }
