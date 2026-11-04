@@ -99,3 +99,4 @@ export default function LandingPage({ onGoLogin, onGoRegister }) {
     </div>
   );
 }
+

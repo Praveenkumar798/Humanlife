@@ -285,3 +285,4 @@ export default function UploadPage({ onNavigate }) {
     </div>
   );
 }
+

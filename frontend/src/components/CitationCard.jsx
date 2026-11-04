@@ -74,3 +74,4 @@ export default function CitationCard({ citation, onOpenMemory }) {
     </div>
   );
 }
+

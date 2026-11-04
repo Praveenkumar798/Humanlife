@@ -54,3 +54,4 @@ export default function ConfirmModal({ isOpen, title, message, onConfirm, onCanc
     </div>
   );
 }
+
