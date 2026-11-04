@@ -241,3 +241,4 @@ def test_chat_router_endpoint(current_user):
 
         assert res.answer == "Grounded answer based on stored memories."
         assert res.conversation_id is not None
+

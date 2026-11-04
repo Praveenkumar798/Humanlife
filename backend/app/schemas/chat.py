@@ -92,3 +92,4 @@ class ConversationListResponse(BaseModel):
     """List of conversations."""
     total: int
     items: List[ConversationResponse]
+

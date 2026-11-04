@@ -195,3 +195,4 @@ async def execute_rag_pipeline(
     answer, is_grounded = await generate_grounded_answer(question, citations)
 
     return answer, citations, is_grounded
+
