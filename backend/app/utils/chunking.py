@@ -131,3 +131,4 @@ def chunk_pdf_pages(
             all_chunks.append(c)
 
     return all_chunks
+

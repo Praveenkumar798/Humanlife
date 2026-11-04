@@ -41,3 +41,4 @@ def extract_pdf_pages(file_path: str) -> List[Dict[str, Any]]:
         doc.close()
 
     return pages
+

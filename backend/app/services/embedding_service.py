@@ -92,3 +92,4 @@ async def generate_embeddings_batch(texts: List[str]) -> List[List[float]]:
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail=f"Batch embedding generation failed: {str(e)}",
         )
+

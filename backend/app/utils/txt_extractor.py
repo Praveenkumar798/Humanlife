@@ -26,3 +26,4 @@ def extract_txt_content(file_path: str) -> str:
     # Normalize line endings and strip trailing whitespace
     normalized = content.replace("\r\n", "\n").replace("\r", "\n").strip()
     return normalized
+
