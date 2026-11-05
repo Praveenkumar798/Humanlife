@@ -127,5 +127,38 @@ export const api = {
     synthesize: (payload) => request('/api/biographer/synthesize', { method: 'POST', body: JSON.stringify(payload) }),
     save: (payload) => request('/api/biographer/save', { method: 'POST', body: JSON.stringify(payload) }),
   },
+
+  // Legacy Memoir Export
+  export: {
+    downloadMemoirPdf: async (params = {}) => {
+      const q = new URLSearchParams();
+      if (params.book_title) q.append('book_title', params.book_title);
+      if (params.include_prologue !== undefined) q.append('include_prologue', params.include_prologue);
+      const qStr = q.toString();
+
+      const response = await fetch(`/api/export/memoir-pdf${qStr ? `?${qStr}` : ''}`, {
+        method: 'GET',
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        let errData;
+        try {
+          errData = await response.json();
+        } catch (_) {}
+        throw new Error(errData?.detail || `Failed to generate PDF (Status ${response.status})`);
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = params.filename || 'Legacy_Memoir_Book.pdf';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    },
+  },
 };
 

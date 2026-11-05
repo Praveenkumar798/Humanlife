@@ -134,3 +134,4 @@ Return ONLY the raw JSON object, without markdown formatting or greetings."""
         "importance": 8.0,
         "tags": ["photo", "image-record", "archive"],
     }
+

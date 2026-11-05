@@ -13,6 +13,8 @@ import {
   LayoutGrid,
   GitCommit,
   BrainCircuit,
+  Download,
+  BookMarked,
 } from 'lucide-react';
 import { api } from '../services/api';
 import LifeTimelineView from '../components/LifeTimelineView';
@@ -40,6 +42,27 @@ export default function LibraryPage({ onNavigate }) {
   const [newEventDate, setNewEventDate] = useState('');
   const [newTags, setNewTags] = useState('');
   const [creating, setCreating] = useState(false);
+
+  // Export Book Modal State
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [exportTitle, setExportTitle] = useState('The Memoir & Life Legacy');
+  const [includePrologue, setIncludePrologue] = useState(true);
+  const [exporting, setExporting] = useState(false);
+
+  const handleExportBook = async () => {
+    try {
+      setExporting(true);
+      await api.export.downloadMemoirPdf({
+        book_title: exportTitle.trim() || undefined,
+        include_prologue: includePrologue,
+      });
+      setIsExportModalOpen(false);
+    } catch (err) {
+      alert(err.message || 'Failed to export memoir book.');
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const fetchMemories = async () => {
     try {
@@ -178,6 +201,21 @@ export default function LibraryPage({ onNavigate }) {
               <BrainCircuit size={15} /> Mind Map
             </button>
           </div>
+
+          <button
+            className="btn btn-secondary"
+            onClick={() => setIsExportModalOpen(true)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              backgroundColor: 'rgba(99, 102, 241, 0.2)',
+              border: '1px solid rgba(129, 140, 248, 0.4)',
+              color: '#fff',
+            }}
+          >
+            <Download size={15} color="#38bdf8" /> Export Book (PDF)
+          </button>
 
           <button className="btn btn-primary" onClick={() => setIsModalOpen(true)}>
             <Plus size={16} /> Record Memory
@@ -493,6 +531,131 @@ export default function LibraryPage({ onNavigate }) {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Export Memoir Book Modal */}
+      {isExportModalOpen && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.75)',
+          backdropFilter: 'blur(10px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          padding: '20px'
+        }}>
+          <div className="card" style={{
+            maxWidth: '560px',
+            width: '100%',
+            background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.98) 100%)',
+            border: '1px solid rgba(129, 140, 248, 0.4)',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.7), 0 0 30px rgba(99, 102, 241, 0.2)',
+            padding: '28px',
+            borderRadius: '20px',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ width: '38px', height: '38px', borderRadius: '10px', backgroundColor: 'rgba(99, 102, 241, 0.2)', border: '1px solid rgba(99, 102, 241, 0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <BookMarked size={20} color="#38bdf8" />
+                </div>
+                <div>
+                  <h2 style={{ fontSize: '18px', fontWeight: '800', color: '#fff' }}>Export My Legacy Book</h2>
+                  <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Printable Hardcover Memoir Edition (PDF)</div>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsExportModalOpen(false)}
+                style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div style={{ marginBottom: '18px' }}>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: 'var(--text-secondary)', marginBottom: '6px' }}>
+                Book Title
+              </label>
+              <input
+                type="text"
+                value={exportTitle}
+                onChange={(e) => setExportTitle(e.target.value)}
+                style={{ width: '100%', padding: '12px 14px', borderRadius: '10px' }}
+                placeholder="The Memoir & Life Legacy"
+              />
+            </div>
+
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#f8fafc', cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={includePrologue}
+                  onChange={(e) => setIncludePrologue(e.target.checked)}
+                  style={{ width: '16px', height: '16px', accentColor: 'var(--accent-primary)' }}
+                />
+                <span>Include Prologue & Family Dedication page</span>
+              </label>
+            </div>
+
+            <div style={{
+              padding: '16px',
+              borderRadius: '12px',
+              backgroundColor: 'rgba(15, 23, 42, 0.6)',
+              border: '1px solid var(--border-color)',
+              marginBottom: '24px',
+              fontSize: '13px',
+              color: 'var(--text-secondary)',
+              lineHeight: '1.6',
+            }}>
+              <div style={{ fontWeight: '700', color: '#38bdf8', marginBottom: '4px' }}>
+                📖 What's inside your Heirloom PDF:
+              </div>
+              <ul style={{ paddingLeft: '18px', margin: 0 }}>
+                <li><strong>{total} Chapters</strong> assembled in chronological order</li>
+                <li>Table of contents with milestone eras & dates</li>
+                <li>Running headers & dynamic two-pass page numbers</li>
+                <li>Archival Colophon with immutable platform seal</li>
+              </ul>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => setIsExportModalOpen(false)}
+                disabled={exporting}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={handleExportBook}
+                disabled={exporting || total === 0}
+                style={{
+                  padding: '12px 24px',
+                  fontWeight: '700',
+                  background: 'linear-gradient(135deg, #6366f1 0%, #38bdf8 100%)',
+                  boxShadow: '0 6px 20px rgba(56, 189, 248, 0.35)',
+                }}
+              >
+                {exporting ? (
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Download size={16} className="spin" /> Binding PDF Memoir...
+                  </span>
+                ) : (
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Download size={16} /> Download Memoir Book (PDF)
+                  </span>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}
