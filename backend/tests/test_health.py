@@ -22,7 +22,7 @@ def test_health_endpoint_status():
     data = asyncio.run(health_check())
     assert data["status"] == "healthy"
     assert data["app"] == "Human Legacy AI"
-    assert data["environment"] == "development"
+    assert data["environment"] == settings.APP_ENV
 
 
 def test_readiness_endpoint_offline_db():

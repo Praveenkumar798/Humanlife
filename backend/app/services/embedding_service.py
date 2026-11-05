@@ -37,9 +37,15 @@ async def generate_embedding(text: str) -> List[float]:
         raise ValueError("Cannot generate embedding for empty text.")
 
     try:
+        embed_config = (
+            {"output_dimensionality": settings.EMBEDDING_DIMENSIONS}
+            if "gemini-embedding" in settings.GEMINI_EMBEDDING_MODEL
+            else None
+        )
         response = client.models.embed_content(
             model=settings.GEMINI_EMBEDDING_MODEL,
             contents=clean_text,
+            config=embed_config,
         )
 
         if not response.embeddings or len(response.embeddings) == 0:
@@ -69,6 +75,11 @@ async def generate_embeddings_batch(texts: List[str]) -> List[List[float]]:
     embeddings_list: List[List[float]] = []
 
     try:
+        embed_config = (
+            {"output_dimensionality": settings.EMBEDDING_DIMENSIONS}
+            if "gemini-embedding" in settings.GEMINI_EMBEDDING_MODEL
+            else None
+        )
         # Generate embeddings for each text
         for t in texts:
             clean = t.strip()
@@ -77,6 +88,7 @@ async def generate_embeddings_batch(texts: List[str]) -> List[List[float]]:
             res = client.models.embed_content(
                 model=settings.GEMINI_EMBEDDING_MODEL,
                 contents=clean,
+                config=embed_config,
             )
             if res.embeddings and len(res.embeddings) > 0:
                 embeddings_list.append(res.embeddings[0].values)
