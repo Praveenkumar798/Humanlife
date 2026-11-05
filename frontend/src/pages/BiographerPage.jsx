@@ -704,3 +704,4 @@ export default function BiographerPage({ onNavigate }) {
     </div>
   );
 }
+

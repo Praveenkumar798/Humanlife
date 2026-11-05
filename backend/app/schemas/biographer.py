@@ -51,3 +51,4 @@ class BiographerSaveRequest(BaseModel):
     event_date: Optional[date] = None
     importance: Optional[float] = Field(8.0, ge=1.0, le=10.0)
     tags: Optional[List[str]] = Field(default_factory=list)
+

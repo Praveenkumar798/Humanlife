@@ -113,9 +113,16 @@ export default function LifeTimelineView({ memories, onOpenMemory }) {
                     <Calendar size={14} />
                     <span>{displayDate}</span>
                   </div>
-                  <span className="badge badge-info" style={{ fontSize: '11px', padding: '3px 9px' }}>
-                    {m.category || 'Memory'}
-                  </span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    {m.source_type === 'photo' && (
+                      <span className="badge badge-primary" style={{ fontSize: '10px', background: 'rgba(192, 132, 252, 0.2)', color: '#c084fc', border: '1px solid rgba(192, 132, 252, 0.4)' }}>
+                        📷 Photo
+                      </span>
+                    )}
+                    <span className="badge badge-info" style={{ fontSize: '11px', padding: '3px 9px' }}>
+                      {m.category || 'Memory'}
+                    </span>
+                  </div>
                 </div>
 
                 {/* Milestone Title */}

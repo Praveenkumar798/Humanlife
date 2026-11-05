@@ -20,6 +20,7 @@ class UploadResponse(BaseModel):
     file_size: int
     status: str
     message: str
+    media_url: Optional[str] = None
 
     model_config = {
         "from_attributes": True
@@ -36,6 +37,7 @@ class UploadStatusResponse(BaseModel):
     job_type: str
     chunks_created: int = 0
     error_message: Optional[str] = None
+    media_url: Optional[str] = None
     created_at: datetime
     completed_at: Optional[datetime] = None
 

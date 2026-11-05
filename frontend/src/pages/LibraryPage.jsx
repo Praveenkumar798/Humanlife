@@ -275,8 +275,8 @@ export default function LibraryPage({ onNavigate }) {
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
                   <span className="badge badge-info">{m.category || 'General'}</span>
-                  <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                    {m.source_type.toUpperCase()}
+                  <span style={{ fontSize: '12px', color: m.source_type === 'photo' ? '#c084fc' : 'var(--text-muted)', fontWeight: m.source_type === 'photo' ? '700' : '500' }}>
+                    {m.source_type === 'photo' ? '📷 PHOTO MEMORY' : m.source_type.toUpperCase()}
                   </span>
                 </div>
 

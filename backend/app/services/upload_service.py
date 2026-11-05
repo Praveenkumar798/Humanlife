@@ -21,10 +21,12 @@ from app.models.processing import ProcessingJob
 from app.utils.pdf_extractor import extract_pdf_pages
 from app.utils.txt_extractor import extract_txt_content
 from app.utils.chunking import chunk_text, chunk_pdf_pages
+from app.utils.image_extractor import extract_image_multimodal, IMAGE_MIME_TYPES
 from app.services.embedding_service import generate_embeddings_batch
 
 UPLOAD_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "uploads"))
-ALLOWED_EXTENSIONS = {".pdf", ".txt"}
+IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
+ALLOWED_EXTENSIONS = {".pdf", ".txt"} | IMAGE_EXTENSIONS
 
 
 def compute_sha256(content: bytes) -> str:
@@ -45,7 +47,7 @@ async def save_uploaded_file(file: UploadFile) -> Tuple[str, str, int, str]:
     if ext not in ALLOWED_EXTENSIONS:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Unsupported file type '{ext}'. Only PDF (.pdf) and TXT (.txt) files are supported.",
+            detail=f"Unsupported file type '{ext}'. Allowed: PDF (.pdf), TXT (.txt), and Images (.jpg, .jpeg, .png, .webp).",
         )
 
     # 2. Read content and validate size
@@ -157,13 +159,41 @@ async def process_file_pipeline(
                 overlap=100,
                 base_metadata={"filename": filename, "source_type": "txt"},
             )
+        elif f".{file_type}" in IMAGE_EXTENSIONS or file_type in {"jpg", "jpeg", "png", "webp"}:
+            vision_data = extract_image_multimodal(stored_path, user_context=title)
+            memory.title = title.strip() if title else vision_data["title"]
+            memory.content = vision_data["narrative"]
+            if vision_data.get("category"):
+                memory.category = category.strip() if category else vision_data["category"]
+            memory.source_type = "photo"
+            if vision_data.get("importance"):
+                memory.importance = vision_data["importance"]
+            if vision_data.get("tags"):
+                memory.tags = vision_data["tags"]
+            if vision_data.get("approximate_date"):
+                try:
+                    memory.event_date = datetime.strptime(str(vision_data["approximate_date"])[:10], "%Y-%m-%d").date()
+                except Exception:
+                    pass
+
+            text_to_chunk = vision_data["narrative"]
+            if vision_data.get("transcription"):
+                text_to_chunk += f"\n\nTranscribed Content:\n{vision_data['transcription']}"
+
+            chunks_data = chunk_text(
+                text=text_to_chunk,
+                chunk_size=600,
+                overlap=100,
+                base_metadata={"filename": filename, "source_type": "photo"},
+            )
 
         if not chunks_data:
             raise ValueError("Document yielded no text chunks.")
 
-        # Update memory content summary
-        first_few = " ".join([c["content"] for c in chunks_data[:3]])
-        memory.content = first_few[:2000]
+        # Update memory content summary for documents
+        if file_type in {"pdf", "txt"}:
+            first_few = " ".join([c["content"] for c in chunks_data[:3]])
+            memory.content = first_few[:2000]
 
         # Generate Gemini embeddings for each chunk
         texts = [c["content"] for c in chunks_data]
@@ -281,13 +311,32 @@ async def retry_processing_job(
                 overlap=100,
                 doc_metadata={"filename": source_file.filename, "source_type": "pdf"},
             )
-        else:
+        elif source_file.file_type == "txt":
             raw_text = extract_txt_content(source_file.file_path)
             chunks_data = chunk_text(
                 text=raw_text,
                 chunk_size=600,
                 overlap=100,
                 base_metadata={"filename": source_file.filename, "source_type": "txt"},
+            )
+        elif f".{source_file.file_type}" in IMAGE_EXTENSIONS or source_file.file_type in {"jpg", "jpeg", "png", "webp", "photo"}:
+            vision_data = extract_image_multimodal(source_file.file_path, user_context=source_file.filename)
+            text_to_chunk = vision_data["narrative"]
+            if vision_data.get("transcription"):
+                text_to_chunk += f"\n\nTranscribed Content:\n{vision_data['transcription']}"
+            chunks_data = chunk_text(
+                text=text_to_chunk,
+                chunk_size=600,
+                overlap=100,
+                base_metadata={"filename": source_file.filename, "source_type": "photo"},
+            )
+        else:
+            raw_text = extract_txt_content(source_file.file_path)
+            chunks_data = chunk_text(
+                text=raw_text,
+                chunk_size=600,
+                overlap=100,
+                base_metadata={"filename": source_file.filename, "source_type": source_file.file_type},
             )
 
         texts = [c["content"] for c in chunks_data]

@@ -224,3 +224,53 @@ def test_upload_router_endpoints(current_user):
         assert res.file_type == "txt"
         assert res.status == "completed"
         assert "successfully" in res.message
+
+
+def test_save_uploaded_file_image():
+    """Verify image files (.jpg, .png) are accepted and saved."""
+    fake_img = UploadFile(
+        filename="wedding_1982.jpg",
+        file=io.BytesIO(b"\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x00\x00\x01\x00\x01\x00\x00")
+    )
+    stored_path, file_type, size, checksum = asyncio.run(save_uploaded_file(fake_img))
+    assert file_type == "jpg"
+    assert size > 0
+    assert checksum
+
+
+def test_extract_image_multimodal_mock():
+    """Verify Gemini Vision JSON parsing for multimodal images."""
+    import tempfile
+    import os
+    from app.utils.image_extractor import extract_image_multimodal
+
+    with tempfile.NamedTemporaryFile(suffix=".jpg", delete=False) as f:
+        f.write(b"dummy-image-bytes")
+        temp_path = f.name
+
+    mock_json = (
+        '{"title": "Wedding in Hyderabad",'
+        '"narrative": "A warm black-and-white photograph of the 1982 wedding.",'
+        '"transcription": null,'
+        '"category": "Family & Roots",'
+        '"approximate_date": "1982-05-14",'
+        '"importance": 9.5,'
+        '"tags": ["wedding", "hyderabad", "1982"]}'
+    )
+
+    mock_client = MagicMock()
+    mock_resp = MagicMock()
+    mock_resp.text = mock_json
+    mock_client.models.generate_content.return_value = mock_resp
+
+    try:
+        with patch("app.utils.image_extractor.settings.GEMINI_API_KEY", "mock-key"):
+            with patch("app.utils.image_extractor.get_gemini_client", return_value=mock_client):
+                res = extract_image_multimodal(temp_path, user_context="Parents wedding")
+                assert res["title"] == "Wedding in Hyderabad"
+                assert "1982 wedding" in res["narrative"]
+                assert res["importance"] == 9.5
+                assert "wedding" in res["tags"]
+    finally:
+        if os.path.exists(temp_path):
+            os.remove(temp_path)
