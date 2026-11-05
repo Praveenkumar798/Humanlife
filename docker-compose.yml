@@ -48,7 +48,7 @@ services:
       GEMINI_LIVE_MODEL: ${GEMINI_LIVE_MODEL:-gemini-3.1-flash-live-preview}
       EMBEDDING_DIMENSIONS: 768
       RAG_TOP_K: 5
-      RAG_SIMILARITY_THRESHOLD: 0.7
+      RAG_SIMILARITY_THRESHOLD: 0.5
       MAX_UPLOAD_SIZE_MB: 50
       CORS_ORIGINS: "http://localhost:5173,http://localhost:3000,http://localhost:80,http://frontend:80"
       APP_ENV: production

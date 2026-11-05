@@ -37,7 +37,7 @@ class Settings(BaseSettings):
 
     # --- RAG Configuration ---
     RAG_TOP_K: int = 5
-    RAG_SIMILARITY_THRESHOLD: float = 0.7
+    RAG_SIMILARITY_THRESHOLD: float = 0.5
 
     # --- File Upload ---
     MAX_UPLOAD_SIZE_MB: int = 50
