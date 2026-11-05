@@ -12,9 +12,14 @@ import {
   BookMarked,
   Settings2,
   Layers,
+  Activity,
+  Sliders,
+  Zap,
+  CheckCircle2,
 } from 'lucide-react';
 import { api } from '../services/api';
 import CitationCard from '../components/CitationCard';
+import AudioWaveformVisualizer from '../components/AudioWaveformVisualizer';
 
 export default function VoicePage({ onNavigate }) {
   const [mode, setMode] = useState('live'); // 'live' | 'fallback'
@@ -26,14 +31,29 @@ export default function VoicePage({ onNavigate }) {
   const [citations, setCitations] = useState([]);
   const [fallbackReason, setFallbackReason] = useState('');
 
+  // VAD & Voice Polish States
+  const [isVadEnabled, setIsVadEnabled] = useState(true);
+  const [vadSensitivity, setVadSensitivity] = useState('medium'); // 'low' | 'medium' | 'high'
+  const [audioLevel, setAudioLevel] = useState(0); // 0-100 meter
+  const [silenceCountdown, setSilenceCountdown] = useState(null); // countdown seconds until auto-send
+  const [activeAnalyser, setActiveAnalyser] = useState(null);
+
   // Refs for Live Mode (16kHz PCM streaming)
   const wsRef = useRef(null);
   const mediaStreamRef = useRef(null);
   const inputAudioCtxRef = useRef(null);
   const processorNodeRef = useRef(null);
+  const inputAnalyserRef = useRef(null);
   const outputAudioCtxRef = useRef(null);
+  const outputAnalyserRef = useRef(null);
   const nextPlayTimeRef = useRef(0);
   const isMutedRef = useRef(isMuted);
+
+  // VAD tracking refs
+  const hasSpokenRef = useRef(false);
+  const lastSpeechTimeRef = useRef(0);
+  const vadIntervalRef = useRef(null);
+  const isSpeakingUserRef = useRef(false);
 
   // Refs for Fallback Mode (MediaRecorder)
   const mediaRecorderRef = useRef(null);
@@ -50,7 +70,28 @@ export default function VoicePage({ onNavigate }) {
     };
   }, []);
 
+  const getSensitivityThreshold = () => {
+    switch (vadSensitivity) {
+      case 'high':
+        return 0.012; // Captures soft whisper
+      case 'low':
+        return 0.038; // Ignores background ambient noise
+      default:
+        return 0.022; // Balanced normal speaking voice
+    }
+  };
+
   const cleanupAllAudio = () => {
+    if (vadIntervalRef.current) {
+      clearInterval(vadIntervalRef.current);
+      vadIntervalRef.current = null;
+    }
+    hasSpokenRef.current = false;
+    isSpeakingUserRef.current = false;
+    setSilenceCountdown(null);
+    setAudioLevel(0);
+    setActiveAnalyser(null);
+
     // Stop browser TTS if speaking
     if ('speechSynthesis' in window) {
       window.speechSynthesis.cancel();
@@ -66,7 +107,9 @@ export default function VoicePage({ onNavigate }) {
 
     // Clean Live Web Audio nodes
     if (processorNodeRef.current) {
-      processorNodeRef.current.disconnect();
+      try {
+        processorNodeRef.current.disconnect();
+      } catch (e) {}
       processorNodeRef.current = null;
     }
     if (inputAudioCtxRef.current) {
@@ -103,10 +146,17 @@ export default function VoicePage({ onNavigate }) {
     try {
       if (!outputAudioCtxRef.current || outputAudioCtxRef.current.state === 'closed') {
         const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-        outputAudioCtxRef.current = new AudioContextClass({ sampleRate });
+        const outCtx = new AudioContextClass({ sampleRate });
+        const outAnalyser = outCtx.createAnalyser();
+        outAnalyser.fftSize = 64;
+        outAnalyser.smoothingTimeConstant = 0.8;
+        outAnalyser.connect(outCtx.destination);
+        outputAudioCtxRef.current = outCtx;
+        outputAnalyserRef.current = outAnalyser;
       }
 
       const audioCtx = outputAudioCtxRef.current;
+      const outAnalyser = outputAnalyserRef.current;
       if (audioCtx.state === 'suspended') {
         audioCtx.resume();
       }
@@ -129,7 +179,12 @@ export default function VoicePage({ onNavigate }) {
 
       const sourceNode = audioCtx.createBufferSource();
       sourceNode.buffer = audioBuffer;
-      sourceNode.connect(audioCtx.destination);
+
+      if (outAnalyser) {
+        sourceNode.connect(outAnalyser);
+      } else {
+        sourceNode.connect(audioCtx.destination);
+      }
 
       const currentTime = audioCtx.currentTime;
       const startTime = Math.max(currentTime, nextPlayTimeRef.current);
@@ -137,10 +192,16 @@ export default function VoicePage({ onNavigate }) {
       nextPlayTimeRef.current = startTime + audioBuffer.duration;
 
       setVoiceState('speaking');
+      if (outAnalyser) {
+        setActiveAnalyser(outAnalyser);
+      }
 
       sourceNode.onended = () => {
         if (audioCtx.currentTime >= nextPlayTimeRef.current - 0.05) {
           setVoiceState('listening');
+          if (inputAnalyserRef.current) {
+            setActiveAnalyser(inputAnalyserRef.current);
+          }
         }
       };
     } catch (err) {
@@ -159,7 +220,6 @@ export default function VoicePage({ onNavigate }) {
     utterance.rate = 1.0;
     utterance.pitch = 1.0;
 
-    // Pick a natural English voice if available
     const voices = window.speechSynthesis.getVoices();
     const preferredVoice = voices.find(
       (v) => v.lang.startsWith('en') && (v.name.includes('Natural') || v.name.includes('Google') || v.name.includes('Samantha'))
@@ -222,19 +282,50 @@ export default function VoicePage({ onNavigate }) {
         inputAudioCtxRef.current = audioCtx;
 
         const micSource = audioCtx.createMediaStreamSource(stream);
+
+        // Visualizer Analyser Node
+        const analyser = audioCtx.createAnalyser();
+        analyser.fftSize = 64;
+        analyser.smoothingTimeConstant = 0.8;
+        inputAnalyserRef.current = analyser;
+        setActiveAnalyser(analyser);
+
         const processor = audioCtx.createScriptProcessor(2048, 1, 1);
         processorNodeRef.current = processor;
 
         processor.onaudioprocess = (e) => {
           if (isMutedRef.current || !wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
+            setAudioLevel(0);
             return;
           }
           const inputData = e.inputBuffer.getChannelData(0);
+
+          // Real-time Energy / RMS calculation for VAD and Level Meter
+          let sum = 0;
+          for (let i = 0; i < inputData.length; i++) {
+            sum += inputData[i] * inputData[i];
+          }
+          const rms = Math.sqrt(sum / inputData.length);
+          const levelPercent = Math.min(100, Math.round(rms * 450));
+          setAudioLevel(levelPercent);
+
+          const threshold = getSensitivityThreshold();
+
+          // Barge-in Interruption: User starts speaking while AI is speaking
+          if (rms > threshold * 1.5 && voiceState === 'speaking') {
+            if (outputAudioCtxRef.current) {
+              nextPlayTimeRef.current = outputAudioCtxRef.current.currentTime;
+            }
+            setVoiceState('listening');
+            setActiveAnalyser(inputAnalyserRef.current);
+          }
+
           const pcmBuffer = floatTo16BitPCM(inputData);
           wsRef.current.send(pcmBuffer);
         };
 
-        micSource.connect(processor);
+        micSource.connect(analyser);
+        analyser.connect(processor);
         processor.connect(audioCtx.destination);
       };
 
@@ -243,12 +334,18 @@ export default function VoicePage({ onNavigate }) {
           const data = JSON.parse(event.data);
           if (data.type === 'live_ready') {
             setVoiceState('listening');
+            if (inputAnalyserRef.current) {
+              setActiveAnalyser(inputAnalyserRef.current);
+            }
           } else if (data.type === 'audio' && data.data) {
             playIncomingPCMChunk(data.data, 24000);
           } else if (data.type === 'transcript') {
             setTranscript((prev) => (prev ? `${prev} ${data.text}` : data.text));
           } else if (data.type === 'turn_complete') {
             setVoiceState('listening');
+            if (inputAnalyserRef.current) {
+              setActiveAnalyser(inputAnalyserRef.current);
+            }
           } else if (data.type === 'fallback_needed') {
             setMode('fallback');
             setVoiceState('idle');
@@ -286,20 +383,30 @@ export default function VoicePage({ onNavigate }) {
   };
 
   // -------------------------------------------------------------
-  // Mode 2: Stage 10 Fallback Voice Pipeline (STT + RAG + TTS)
+  // Mode 2: Stage 10 Fallback Voice Pipeline + Client-Side VAD
   // -------------------------------------------------------------
   const startFallbackVoiceRecording = async () => {
     setErrorMessage('');
     setTranscript('');
     setAnswer('');
     setCitations([]);
+    hasSpokenRef.current = false;
+    isSpeakingUserRef.current = false;
+    setSilenceCountdown(null);
 
     try {
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         throw new Error('Microphone audio capture is not supported in this browser.');
       }
 
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          channelCount: 1,
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        },
+      });
       mediaStreamRef.current = stream;
 
       const mediaRecorder = new MediaRecorder(stream);
@@ -313,6 +420,13 @@ export default function VoicePage({ onNavigate }) {
       };
 
       mediaRecorder.onstop = async () => {
+        if (vadIntervalRef.current) {
+          clearInterval(vadIntervalRef.current);
+          vadIntervalRef.current = null;
+        }
+        setSilenceCountdown(null);
+        setAudioLevel(0);
+
         const audioBlob = new Blob(audioChunksRef.current, { type: mediaRecorder.mimeType || 'audio/webm' });
         audioChunksRef.current = [];
         stream.getTracks().forEach((track) => track.stop());
@@ -321,9 +435,65 @@ export default function VoicePage({ onNavigate }) {
         await processFallbackAudioQuery(audioBlob);
       };
 
+      // Set up AudioContext & Analyser for Visualizer & VAD in Fallback Mode
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      const audioCtx = new AudioContextClass();
+      inputAudioCtxRef.current = audioCtx;
+
+      const micSource = audioCtx.createMediaStreamSource(stream);
+      const analyser = audioCtx.createAnalyser();
+      analyser.fftSize = 64;
+      analyser.smoothingTimeConstant = 0.8;
+      inputAnalyserRef.current = analyser;
+      setActiveAnalyser(analyser);
+
+      const processor = audioCtx.createScriptProcessor(2048, 1, 1);
+      processorNodeRef.current = processor;
+
+      processor.onaudioprocess = (e) => {
+        const inputData = e.inputBuffer.getChannelData(0);
+        let sum = 0;
+        for (let i = 0; i < inputData.length; i++) {
+          sum += inputData[i] * inputData[i];
+        }
+        const rms = Math.sqrt(sum / inputData.length);
+        const levelPercent = Math.min(100, Math.round(rms * 450));
+        setAudioLevel(levelPercent);
+
+        const threshold = getSensitivityThreshold();
+
+        if (rms >= threshold) {
+          hasSpokenRef.current = true;
+          lastSpeechTimeRef.current = Date.now();
+          isSpeakingUserRef.current = true;
+          setSilenceCountdown(null);
+        } else if (hasSpokenRef.current && isVadEnabled) {
+          isSpeakingUserRef.current = false;
+          const elapsedSilence = Date.now() - lastSpeechTimeRef.current;
+          const silenceThresholdMs = 1500; // 1.5 seconds silence auto-stop
+
+          if (elapsedSilence > silenceThresholdMs) {
+            // Auto-stop triggered by VAD!
+            hasSpokenRef.current = false;
+            stopFallbackVoiceRecording();
+          } else {
+            const remaining = Math.max(0.1, (silenceThresholdMs - elapsedSilence) / 1000).toFixed(1);
+            setSilenceCountdown(remaining);
+          }
+        }
+      };
+
+      micSource.connect(analyser);
+      analyser.connect(processor);
+      processor.connect(audioCtx.destination);
+
       mediaRecorder.start();
       setVoiceState('listening');
-      setTranscript('Recording your voice question... Tap microphone again when finished.');
+      setTranscript(
+        isVadEnabled
+          ? 'Listening... speak your question. System will automatically detect when you finish speaking.'
+          : 'Recording your voice question... Tap microphone again when finished.'
+      );
     } catch (err) {
       setVoiceState('error');
       setErrorMessage(err.message || 'Failed to record audio.');
@@ -333,6 +503,7 @@ export default function VoicePage({ onNavigate }) {
   const stopFallbackVoiceRecording = () => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
       setVoiceState('processing');
+      setSilenceCountdown(null);
       mediaRecorderRef.current.stop();
     }
   };
@@ -392,7 +563,7 @@ export default function VoicePage({ onNavigate }) {
       case 'listening':
         return (
           <span className="badge badge-success">
-            <Radio size={12} /> {mode === 'live' ? 'Listening (Live 16kHz Stream)' : 'Recording Voice (Tap to Stop)'}
+            <Radio size={12} /> {mode === 'live' ? 'Listening (Live Multimodal)' : (isVadEnabled ? 'Hands-Free VAD Listening' : 'Recording Voice')}
           </span>
         );
       case 'processing':
@@ -407,11 +578,11 @@ export default function VoicePage({ onNavigate }) {
   };
 
   return (
-    <div className="page-wrapper" style={{ maxWidth: '800px', textAlign: 'center' }}>
-      <div style={{ marginBottom: '24px' }}>
+    <div className="page-wrapper" style={{ maxWidth: '820px', textAlign: 'center' }}>
+      <div style={{ marginBottom: '20px' }}>
         <h1 style={{ fontSize: '28px', fontWeight: '800' }}>Voice Memory Assistant</h1>
         <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginTop: '6px' }}>
-          Spoken conversation grounded in your stored memories via Gemini Live API & Fallback Pipeline.
+          Real-time spoken conversation with Voice Activity Detection (VAD) & audio waveform visualizer.
         </p>
 
         {/* Mode Selector Tabs */}
@@ -476,8 +647,8 @@ export default function VoicePage({ onNavigate }) {
       )}
 
       {/* Main Voice Center Card */}
-      <div className="card" style={{ padding: '50px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '24px' }}>
-        <div style={{ marginBottom: '24px' }}>
+      <div className="card" style={{ padding: '40px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '20px' }}>
+        <div style={{ marginBottom: '16px' }}>
           {getStateBadge()}
         </div>
 
@@ -485,8 +656,8 @@ export default function VoicePage({ onNavigate }) {
         <div
           onClick={handleMicrophoneClick}
           style={{
-            width: '130px',
-            height: '130px',
+            width: '128px',
+            height: '128px',
             borderRadius: '50%',
             backgroundColor:
               voiceState === 'listening'
@@ -503,47 +674,83 @@ export default function VoicePage({ onNavigate }) {
             cursor: 'pointer',
             boxShadow:
               voiceState === 'listening'
-                ? '0 0 0 16px rgba(16, 185, 129, 0.2), 0 0 0 32px rgba(16, 185, 129, 0.1)'
+                ? `0 0 0 ${Math.max(12, Math.round(audioLevel / 3))}px rgba(16, 185, 129, 0.25), 0 0 0 ${Math.max(24, Math.round(audioLevel / 1.5))}px rgba(16, 185, 129, 0.12)`
                 : voiceState === 'speaking'
                 ? '0 0 0 16px rgba(168, 85, 247, 0.25), 0 0 0 32px rgba(168, 85, 247, 0.12)'
                 : '0 0 0 10px rgba(59, 130, 246, 0.15)',
-            transition: 'all 0.3s ease',
-            marginBottom: '28px',
+            transition: 'box-shadow 0.15s ease, background-color 0.3s ease',
+            marginBottom: '16px',
           }}
         >
-          {voiceState === 'listening' || voiceState === 'speaking' ? <Mic size={52} /> : <MicOff size={52} />}
+          {voiceState === 'listening' || voiceState === 'speaking' ? <Mic size={48} /> : <MicOff size={48} />}
         </div>
 
-        <h3 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '8px' }}>
+        {/* Audio Waveform Visualizer Canvas */}
+        <AudioWaveformVisualizer
+          analyserNode={activeAnalyser}
+          voiceState={voiceState}
+          width={380}
+          height={64}
+        />
+
+        {/* Real-time Decibel / Energy Level Bar & Silence Countdown */}
+        {voiceState === 'listening' && (
+          <div style={{ width: '100%', maxWidth: '380px', marginBottom: '16px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px' }}>
+              <span>Mic Energy</span>
+              <span>
+                {silenceCountdown ? (
+                  <strong style={{ color: 'var(--accent-warning)' }}>
+                    Pause detected: auto-sending in {silenceCountdown}s...
+                  </strong>
+                ) : (
+                  `${audioLevel}%`
+                )}
+              </span>
+            </div>
+            <div style={{ width: '100%', height: '5px', backgroundColor: 'var(--bg-secondary)', borderRadius: '3px', overflow: 'hidden' }}>
+              <div
+                style={{
+                  width: `${audioLevel}%`,
+                  height: '100%',
+                  backgroundColor: audioLevel > 50 ? 'var(--accent-warning)' : 'var(--accent-success)',
+                  transition: 'width 0.1s ease',
+                }}
+              />
+            </div>
+          </div>
+        )}
+
+        <h3 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '6px' }}>
           {voiceState === 'idle' || voiceState === 'error'
             ? mode === 'live'
               ? 'Tap microphone to start real-time conversation'
-              : 'Tap microphone to record voice question'
+              : 'Tap microphone to speak (Hands-Free VAD Enabled)'
             : voiceState === 'speaking'
-            ? 'AI Replica is speaking...'
+            ? 'AI Replica is speaking (Speak anytime to interrupt)...'
             : voiceState === 'processing'
             ? 'Synthesizing grounded memory response...'
-            : mode === 'live'
-            ? 'Listening... speak naturally'
+            : isVadEnabled
+            ? 'Listening... pause speaking when finished'
             : 'Listening... tap microphone when finished'}
         </h3>
 
-        <p style={{ color: 'var(--text-secondary)', fontSize: '13px', maxWidth: '520px', lineHeight: '1.6', minHeight: '36px' }}>
+        <p style={{ color: 'var(--text-secondary)', fontSize: '13px', maxWidth: '520px', lineHeight: '1.6', minHeight: '32px' }}>
           {transcript || (mode === 'live'
-            ? 'Speak naturally into your microphone. The AI will retrieve your memories and respond with grounded speech in real-time.'
-            : 'Record a question about your memories. The system will transcribe, perform RAG retrieval, and speak the verified answer.')}
+            ? 'Speak naturally into your microphone. The AI replica will retrieve your memories and respond with grounded speech in real-time.'
+            : 'Ask a question about your memories. When you finish speaking, VAD will automatically transcribe, search memories, and speak back.')}
         </p>
 
         {/* Spoken Answer Text */}
         {answer && (
           <div style={{
-            marginTop: '20px',
+            marginTop: '16px',
             padding: '16px 20px',
             backgroundColor: 'var(--bg-secondary)',
             borderRadius: 'var(--radius-md)',
             border: '1px solid var(--border-color)',
             textAlign: 'left',
-            maxWidth: '600px',
+            maxWidth: '620px',
             width: '100%',
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: '600', color: 'var(--accent-primary)', marginBottom: '6px' }}>
@@ -557,7 +764,7 @@ export default function VoicePage({ onNavigate }) {
 
         {/* Citations Panel */}
         {citations.length > 0 && (
-          <div style={{ width: '100%', maxWidth: '600px', marginTop: '16px', textAlign: 'left' }}>
+          <div style={{ width: '100%', maxWidth: '620px', marginTop: '16px', textAlign: 'left' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--text-muted)', marginBottom: '8px' }}>
               <BookMarked size={14} /> Grounded Sources ({citations.length})
             </div>
@@ -573,7 +780,7 @@ export default function VoicePage({ onNavigate }) {
 
         {/* Action Controls */}
         {voiceState !== 'idle' && (
-          <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
+          <div style={{ display: 'flex', gap: '12px', marginTop: '20px' }}>
             {mode === 'live' && (
               <button
                 className="btn btn-secondary btn-sm"
@@ -597,16 +804,61 @@ export default function VoicePage({ onNavigate }) {
         )}
       </div>
 
-      {/* Voice Privacy & Protocol Card */}
+      {/* Voice Polish & VAD Settings Bar */}
+      <div className="card" style={{ padding: '16px 20px', marginBottom: '20px', textAlign: 'left', display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Activity size={18} color="var(--accent-primary)" />
+          <div>
+            <div style={{ fontSize: '13px', fontWeight: '600' }}>Voice Activity Detection (Hands-Free VAD)</div>
+            <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Automatically detects silence (1.5s) to query memories without clicking</div>
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          {/* Sensitivity Select */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px' }}>
+            <span style={{ color: 'var(--text-muted)' }}>Sensitivity:</span>
+            <select
+              value={vadSensitivity}
+              onChange={(e) => setVadSensitivity(e.target.value)}
+              style={{
+                backgroundColor: 'var(--bg-secondary)',
+                border: '1px solid var(--border-color)',
+                borderRadius: '6px',
+                color: 'var(--text-primary)',
+                padding: '4px 8px',
+                fontSize: '12px',
+                cursor: 'pointer',
+              }}
+            >
+              <option value="high">High (Whisper / Quiet)</option>
+              <option value="medium">Medium (Normal)</option>
+              <option value="low">Low (Noisy Room)</option>
+            </select>
+          </div>
+
+          {/* VAD Toggle Button */}
+          <button
+            className={`btn btn-sm ${isVadEnabled ? 'btn-primary' : 'btn-secondary'}`}
+            style={{ fontSize: '12px', padding: '4px 12px' }}
+            onClick={() => setIsVadEnabled(!isVadEnabled)}
+          >
+            {isVadEnabled ? <CheckCircle2 size={13} style={{ marginRight: '4px' }} /> : null}
+            {isVadEnabled ? 'Hands-Free ON' : 'Manual Push-To-Talk'}
+          </button>
+        </div>
+      </div>
+
+      {/* Voice Architecture Info Card */}
       <div className="card" style={{ textAlign: 'left', padding: '20px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
           <Shield size={18} color="var(--accent-success)" />
-          <h4 style={{ fontSize: '14px', fontWeight: '600' }}>Dual-Engine Voice Preservation Architecture</h4>
+          <h4 style={{ fontSize: '14px', fontWeight: '600' }}>Real-Time Voice Architecture with Client-Side VAD</h4>
         </div>
         <p style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: '1.6' }}>
-          Human Legacy AI employs a multi-tiered voice layer: primary bidirectional audio streaming powered by Google Gemini Live Multimodal API
-          with instant automatic fallback to Speech-to-Text (STT) + pgvector RAG + Text-to-Speech (TTS) synthesis.
-          Microphone access is strictly session-bound and all operations are securely authenticated.
+          Integrated HTML5 Web Audio visualizer with zero-latency Client Voice Activity Detection.
+          Supports natural interruption (barge-in) during live speech playback and automated turn-taking.
+          Audio processing runs strictly in browser memory and all RAG memory retrieval is cryptographically isolated per user.
         </p>
       </div>
     </div>
