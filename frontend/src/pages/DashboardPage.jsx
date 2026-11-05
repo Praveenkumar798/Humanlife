@@ -96,6 +96,13 @@ export default function DashboardPage({ onNavigate }) {
             </button>
             <button
               className="btn btn-secondary"
+              onClick={() => onNavigate('biographer')}
+              style={{ padding: '12px 22px', fontSize: '14px', background: 'rgba(99, 102, 241, 0.25)', border: '1px solid rgba(129, 140, 248, 0.4)', color: '#fff' }}
+            >
+              <Sparkles size={18} color="#c084fc" /> AI Biographer Interview
+            </button>
+            <button
+              className="btn btn-secondary"
               onClick={() => onNavigate('library')}
               style={{ padding: '12px 22px', fontSize: '14px' }}
             >

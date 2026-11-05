@@ -10,7 +10,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
 from app.database import init_db, engine
-from app.routers import health, auth, memories, uploads, chat, websocket_chat, websocket_voice, voice_fallback
+from app.routers import health, auth, memories, uploads, chat, websocket_chat, websocket_voice, voice_fallback, biographer
 
 
 @asynccontextmanager
@@ -64,6 +64,7 @@ app.include_router(chat.router)
 app.include_router(websocket_chat.router)
 app.include_router(websocket_voice.router)
 app.include_router(voice_fallback.router)
+app.include_router(biographer.router)
 
 
 @app.get("/")

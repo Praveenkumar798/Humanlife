@@ -112,5 +112,20 @@ export const api = {
       return request('/api/voice/query', { method: 'POST', body: fd });
     },
   },
+
+  // AI Biographer Mode
+  biographer: {
+    topics: () => request('/api/biographer/topics', { method: 'GET' }),
+    nextQuestion: (params = {}) => {
+      const q = new URLSearchParams();
+      if (params.era) q.append('era', params.era);
+      if (params.exclude_id) q.append('exclude_id', params.exclude_id);
+      const str = q.toString();
+      return request(`/api/biographer/question/next${str ? `?${str}` : ''}`, { method: 'GET' });
+    },
+    getQuestion: (id) => request(`/api/biographer/question/${id}`, { method: 'GET' }),
+    synthesize: (payload) => request('/api/biographer/synthesize', { method: 'POST', body: JSON.stringify(payload) }),
+    save: (payload) => request('/api/biographer/save', { method: 'POST', body: JSON.stringify(payload) }),
+  },
 };
 

@@ -18,6 +18,7 @@ export default function Sidebar({ activeTab, setActiveTab }) {
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'library', label: 'Memory Library', icon: BookOpen },
+    { id: 'biographer', label: 'AI Biographer', icon: Sparkles, badge: 'New' },
     { id: 'upload', label: 'Upload Documents', icon: Upload },
     { id: 'chat', label: 'AI Text Chat', icon: MessageSquare },
     { id: 'voice', label: 'Voice Assistant', icon: Mic, badge: 'Live' },

@@ -355,3 +355,4 @@ export default function NeuralMindMapView({ memories, onOpenMemory }) {
     </div>
   );
 }
+

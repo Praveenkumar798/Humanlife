@@ -12,6 +12,7 @@ import MemoryDetailPage from './pages/MemoryDetailPage';
 import UploadPage from './pages/UploadPage';
 import ChatPage from './pages/ChatPage';
 import VoicePage from './pages/VoicePage';
+import BiographerPage from './pages/BiographerPage';
 import SettingsPage from './pages/SettingsPage';
 
 export default function App() {
@@ -94,6 +95,7 @@ export default function App() {
           />
         )}
         {activeTab === 'voice' && <VoicePage onNavigate={navigateTo} />}
+        {activeTab === 'biographer' && <BiographerPage onNavigate={navigateTo} />}
         {activeTab === 'settings' && <SettingsPage onNavigate={navigateTo} />}
       </main>
       <MobileNav activeTab={activeTab} setActiveTab={setActiveTab} />

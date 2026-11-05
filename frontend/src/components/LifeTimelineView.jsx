@@ -156,3 +156,4 @@ export default function LifeTimelineView({ memories, onOpenMemory }) {
     </div>
   );
 }
+
