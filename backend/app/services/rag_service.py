@@ -21,6 +21,19 @@ from app.services.embedding_service import generate_embedding, get_gemini_client
 
 FALLBACK_INSUFFICIENT_INFO = "I could not find enough information in the stored memories to answer that."
 
+CONVERSATIONAL_PHRASES = {
+    "ok", "okay", "k", "sure", "got it", "cool", "alright", "all right",
+    "thanks", "thank you", "thx", "thank u", "thank you so much", "many thanks",
+    "hello", "hi", "hey", "good morning", "good evening", "good afternoon", "good night",
+    "bye", "goodbye", "see you", "great", "nice", "understood", "yes", "no", "awesome",
+}
+
+
+def is_conversational_acknowledgement(text: str) -> bool:
+    """Check if the user message is a conversational greeting or acknowledgment."""
+    clean = text.strip().lower().rstrip(".!?,:; ")
+    return clean in CONVERSATIONAL_PHRASES
+
 
 async def search_relevant_chunks(
     db: AsyncSession,
@@ -132,16 +145,16 @@ GROUNDED ANSWER:"""
 async def generate_grounded_answer(
     question: str,
     citations: List[SourceCitation],
+    conversational_prompt: Optional[str] = None,
 ) -> Tuple[str, bool]:
     """
-    Query Gemini LLM with the grounded prompt.
+    Query Gemini LLM with the grounded prompt or conversational prompt.
     Returns: (answer_text, is_grounded)
     """
-    # If no relevant chunks meet the threshold, return standard fallback immediately
-    if not citations:
+    if not citations and not conversational_prompt:
         return FALLBACK_INSUFFICIENT_INFO, False
 
-    prompt = construct_rag_prompt(question, citations)
+    prompt = conversational_prompt if conversational_prompt else construct_rag_prompt(question, citations)
     client = get_gemini_client()
 
     try:
@@ -151,7 +164,7 @@ async def generate_grounded_answer(
         )
 
         answer = response.text.strip() if response and response.text else FALLBACK_INSUFFICIENT_INFO
-        is_grounded = FALLBACK_INSUFFICIENT_INFO not in answer
+        is_grounded = bool(citations) and (FALLBACK_INSUFFICIENT_INFO not in answer)
 
         return answer, is_grounded
 
@@ -167,17 +180,18 @@ async def generate_grounded_answer(
 async def generate_grounded_answer_stream(
     question: str,
     citations: List[SourceCitation],
+    conversational_prompt: Optional[str] = None,
 ) -> AsyncGenerator[str, None]:
     """
     Stream grounded answer tokens from Gemini LLM.
     If no relevant chunks exist, yields standard fallback string directly.
     Supports both async iterator and generator fallback.
     """
-    if not citations:
+    if not citations and not conversational_prompt:
         yield FALLBACK_INSUFFICIENT_INFO
         return
 
-    prompt = construct_rag_prompt(question, citations)
+    prompt = conversational_prompt if conversational_prompt else construct_rag_prompt(question, citations)
     client = get_gemini_client()
 
     try:
@@ -243,10 +257,19 @@ async def execute_rag_pipeline(
 ) -> Tuple[str, List[SourceCitation], bool]:
     """
     Complete RAG pipeline:
-    1. Embed user query with Gemini text-embedding-004
-    2. Vector similarity search in PostgreSQL via pgvector
-    3. Generate grounded answer with Gemini LLM
+    1. If user message is conversational greeting/acknowledgement, respond warmly without memory lookup.
+    2. Embed user query with Gemini embeddings.
+    3. Vector similarity search in PostgreSQL via pgvector.
+    4. Generate grounded answer with Gemini LLM.
     """
+    clean_q = question.strip()
+    if is_conversational_acknowledgement(clean_q):
+        conv_prompt = f"""You are the Human Legacy AI Assistant, dedicated to preserving and sharing a person's life memories and principles.
+The user just sent a conversational remark or greeting: "{clean_q}".
+Respond warmly, respectfully, and concisely in 1-2 friendly sentences, letting them know you are here whenever they would like to ask about or reflect on their memories. Do not invent any memories, cite sources, or return an insufficient info error."""
+        answer, _ = await generate_grounded_answer(clean_q, citations=[], conversational_prompt=conv_prompt)
+        return answer, [], True
+
     k = top_k or settings.RAG_TOP_K
     thresh = similarity_threshold if similarity_threshold is not None else settings.RAG_SIMILARITY_THRESHOLD
 

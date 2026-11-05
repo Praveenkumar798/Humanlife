@@ -29,6 +29,7 @@ from app.services.rag_service import (
     search_relevant_chunks,
     generate_grounded_answer_stream,
     FALLBACK_INSUFFICIENT_INFO,
+    is_conversational_acknowledgement,
 )
 
 
@@ -277,6 +278,48 @@ async def stream_chat_rag(
         "conversation_id": str(convo.id),
         "user_message_id": str(user_msg.id),
     }
+
+    # Handle conversational greetings and acknowledgments (e.g. "ok", "thanks", "hello")
+    if is_conversational_acknowledgement(clean_msg):
+        yield {
+            "type": "citations",
+            "conversation_id": str(convo.id),
+            "citations": [],
+        }
+        conv_prompt = f"""You are the Human Legacy AI Assistant, dedicated to preserving and sharing a person's life memories and principles.
+The user just sent a conversational remark or greeting: "{clean_msg}".
+Respond warmly, respectfully, and concisely in 1-2 friendly sentences, letting them know you are here whenever they would like to ask about or reflect on their memories. Do not invent any memories, cite sources, or return an insufficient info error."""
+        full_text = ""
+        try:
+            async for token in generate_grounded_answer_stream(clean_msg, citations=[], conversational_prompt=conv_prompt):
+                full_text += token
+                yield {"type": "chunk", "text": token}
+        except Exception:
+            fallback_ans = "I'm here whenever you'd like to reflect on your memories or ask anything."
+            full_text = fallback_ans
+            yield {"type": "chunk", "text": fallback_ans}
+
+        answer = full_text.strip()
+        assistant_msg = ConversationMessage(
+            id=uuid.uuid4(),
+            conversation_id=convo.id,
+            role="assistant",
+            content=answer,
+            sources=[],
+            created_at=datetime.now(timezone.utc),
+        )
+        db.add(assistant_msg)
+        convo.updated_at = datetime.now(timezone.utc)
+        await db.commit()
+
+        yield {
+            "type": "done",
+            "conversation_id": str(convo.id),
+            "message_id": str(assistant_msg.id),
+            "full_text": answer,
+            "is_grounded": True,
+        }
+        return
 
     # 3. Vector retrieval
     k = top_k or settings.RAG_TOP_K
