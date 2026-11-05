@@ -10,10 +10,16 @@ import {
   CheckCircle,
   FileText,
   X,
+  LayoutGrid,
+  GitCommit,
+  BrainCircuit,
 } from 'lucide-react';
 import { api } from '../services/api';
+import LifeTimelineView from '../components/LifeTimelineView';
+import NeuralMindMapView from '../components/NeuralMindMapView';
 
 export default function LibraryPage({ onNavigate }) {
+  const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'timeline' | 'mindmap'
   const [memories, setMemories] = useState([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -103,15 +109,80 @@ export default function LibraryPage({ onNavigate }) {
       {/* Header & Controls */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
         <div>
-          <h1 style={{ fontSize: '26px', fontWeight: '800' }}>Memory Library</h1>
+          <h1 style={{ fontSize: '28px', fontWeight: '800', letterSpacing: '-0.5px' }}>Memory Library</h1>
           <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginTop: '4px' }}>
-            Browse, search, and manage your preserved memories ({total} total)
+            Explore your life legacy across Card, Timeline, and Neural Mind Map views ({total} total)
           </p>
         </div>
 
-        <button className="btn btn-primary" onClick={() => setIsModalOpen(true)}>
-          <Plus size={16} /> Record New Memory
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+          {/* View Mode Switcher */}
+          <div
+            style={{
+              display: 'inline-flex',
+              padding: '4px',
+              backgroundColor: 'rgba(15, 23, 42, 0.7)',
+              borderRadius: '12px',
+              border: '1px solid var(--border-color)',
+            }}
+          >
+            <button
+              onClick={() => setViewMode('grid')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '7px 14px',
+                fontSize: '13px',
+                fontWeight: '600',
+                borderRadius: '8px',
+                backgroundColor: viewMode === 'grid' ? 'var(--accent-primary)' : 'transparent',
+                color: viewMode === 'grid' ? '#fff' : 'var(--text-secondary)',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              <LayoutGrid size={15} /> Grid
+            </button>
+            <button
+              onClick={() => setViewMode('timeline')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '7px 14px',
+                fontSize: '13px',
+                fontWeight: '600',
+                borderRadius: '8px',
+                backgroundColor: viewMode === 'timeline' ? 'var(--accent-primary)' : 'transparent',
+                color: viewMode === 'timeline' ? '#fff' : 'var(--text-secondary)',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              <GitCommit size={15} /> Timeline
+            </button>
+            <button
+              onClick={() => setViewMode('mindmap')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '7px 14px',
+                fontSize: '13px',
+                fontWeight: '600',
+                borderRadius: '8px',
+                backgroundColor: viewMode === 'mindmap' ? 'var(--accent-primary)' : 'transparent',
+                color: viewMode === 'mindmap' ? '#fff' : 'var(--text-secondary)',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              <BrainCircuit size={15} /> Mind Map
+            </button>
+          </div>
+
+          <button className="btn btn-primary" onClick={() => setIsModalOpen(true)}>
+            <Plus size={16} /> Record Memory
+          </button>
+        </div>
       </div>
 
       {error && <div className="alert alert-danger">{error}</div>}
@@ -174,6 +245,16 @@ export default function LibraryPage({ onNavigate }) {
             <Plus size={16} /> Record Memory
           </button>
         </div>
+      ) : viewMode === 'timeline' ? (
+        <LifeTimelineView
+          memories={memories}
+          onOpenMemory={(m) => onNavigate('memory-detail', { memoryId: m.id })}
+        />
+      ) : viewMode === 'mindmap' ? (
+        <NeuralMindMapView
+          memories={memories}
+          onOpenMemory={(m) => onNavigate('memory-detail', { memoryId: m.id })}
+        />
       ) : (
         <div className="grid-3" style={{ marginBottom: '32px' }}>
           {memories.map((m) => (
