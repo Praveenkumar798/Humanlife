@@ -9,6 +9,10 @@ import {
   CheckCircle,
   FileText,
   ArrowRight,
+  Sparkles,
+  BrainCircuit,
+  ShieldCheck,
+  Zap,
 } from 'lucide-react';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -48,14 +52,82 @@ export default function DashboardPage({ onNavigate }) {
 
   return (
     <div className="page-wrapper">
-      {/* Header */}
-      <div style={{ marginBottom: '32px' }}>
-        <h1 style={{ fontSize: '28px', fontWeight: '800', letterSpacing: '-0.5px' }}>
-          Welcome back, {user?.full_name || user?.username}
-        </h1>
-        <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginTop: '4px' }}>
-          Your personal cognitive preservation archive is active and protected.
-        </p>
+      {/* Hero Welcome Banner with Holographic Cognitive Status */}
+      <div
+        className="card"
+        style={{
+          padding: '36px 32px',
+          marginBottom: '32px',
+          background: 'linear-gradient(135deg, rgba(30, 27, 75, 0.7) 0%, rgba(15, 23, 42, 0.85) 60%, rgba(19, 78, 74, 0.3) 100%)',
+          border: '1px solid rgba(129, 140, 248, 0.3)',
+          boxShadow: '0 20px 40px -15px rgba(0, 0, 0, 0.6), 0 0 30px rgba(99, 102, 241, 0.15)',
+          display: 'flex',
+          flexWrap: 'wrap',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '24px',
+          position: 'relative',
+          overflow: 'hidden',
+        }}
+      >
+        <div style={{ maxWidth: '640px', position: 'relative', zIndex: 2 }}>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '6px 14px', borderRadius: '9999px', background: 'rgba(99, 102, 241, 0.18)', border: '1px solid rgba(99, 102, 241, 0.35)', marginBottom: '14px' }}>
+            <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#10b981', boxShadow: '0 0 10px #10b981', display: 'inline-block' }}></span>
+            <span style={{ fontSize: '12px', fontWeight: '700', color: '#a5b4fc', letterSpacing: '0.3px', textTransform: 'uppercase' }}>
+              Cognitive Replica Online
+            </span>
+          </div>
+
+          <h1 style={{ fontSize: '32px', fontWeight: '800', letterSpacing: '-0.8px', color: '#fff', marginBottom: '10px' }}>
+            Welcome back, <span style={{ background: 'var(--gradient-brand)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>{user?.full_name || user?.username}</span>
+          </h1>
+
+          <p style={{ color: 'var(--text-secondary)', fontSize: '15px', lineHeight: '1.6' }}>
+            Your personal memories, core values, and life decisions are safely preserved in our pgvector neural vault with Gemini real-time grounding.
+          </p>
+
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '14px', marginTop: '22px' }}>
+            <button
+              className="btn btn-primary"
+              onClick={() => onNavigate('voice')}
+              style={{ padding: '12px 22px', fontSize: '14px' }}
+            >
+              <Mic size={18} /> Talk with Replica
+            </button>
+            <button
+              className="btn btn-secondary"
+              onClick={() => onNavigate('library')}
+              style={{ padding: '12px 22px', fontSize: '14px' }}
+            >
+              <PlusCircle size={18} /> Add New Memory
+            </button>
+          </div>
+        </div>
+
+        {/* Neural Stats Box */}
+        <div
+          style={{
+            background: 'rgba(15, 23, 42, 0.65)',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            borderRadius: '18px',
+            padding: '20px 26px',
+            backdropFilter: 'blur(12px)',
+            display: 'flex',
+            gap: '24px',
+            alignItems: 'center',
+            zIndex: 2,
+          }}
+        >
+          <div>
+            <div style={{ fontSize: '28px', fontWeight: '800', color: '#38bdf8' }}>{totalMemories}</div>
+            <div style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: '600' }}>Indexed Memories</div>
+          </div>
+          <div style={{ width: '1px', height: '40px', backgroundColor: 'rgba(255, 255, 255, 0.1)' }}></div>
+          <div>
+            <div style={{ fontSize: '28px', fontWeight: '800', color: '#a855f7' }}>768-D</div>
+            <div style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: '600' }}>Vector Embeddings</div>
+          </div>
+        </div>
       </div>
 
       {error && <div className="alert alert-danger">{error}</div>}
@@ -64,85 +136,84 @@ export default function DashboardPage({ onNavigate }) {
       <div className="grid-3" style={{ marginBottom: '32px' }}>
         <div
           className="card"
-          onClick={() => onNavigate('upload')}
-          style={{ cursor: 'pointer', transition: 'border-color 0.2s ease', border: '1px solid var(--border-color)' }}
-          onMouseEnter={(e) => (e.currentTarget.style.borderColor = 'var(--accent-primary)')}
-          onMouseLeave={(e) => (e.currentTarget.style.borderColor = 'var(--border-color)')}
+          onClick={() => onNavigate('voice')}
+          style={{ cursor: 'pointer', border: '1px solid rgba(168, 85, 247, 0.25)' }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
             <div style={{
-              width: '42px',
-              height: '42px',
-              borderRadius: '10px',
-              backgroundColor: 'var(--accent-light)',
+              width: '46px',
+              height: '46px',
+              borderRadius: '14px',
+              backgroundColor: 'rgba(168, 85, 247, 0.15)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              color: 'var(--accent-primary)'
+              color: '#c084fc',
+              boxShadow: '0 4px 12px rgba(168, 85, 247, 0.25)',
             }}>
-              <Upload size={22} />
+              <Mic size={24} />
             </div>
-            <span className="badge badge-info">PDF & TXT</span>
+            <span className="badge" style={{ backgroundColor: 'rgba(168, 85, 247, 0.18)', color: '#c084fc', border: '1px solid rgba(168, 85, 247, 0.3)' }}>
+              ⚡ Real-Time Live
+            </span>
           </div>
-          <h3 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '6px' }}>Upload Document</h3>
-          <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
-            Extract and chunk life journals, letters, or PDF documents into vector embeddings.
+          <h3 style={{ fontSize: '17px', fontWeight: '700', marginBottom: '8px', color: '#fff' }}>Voice Assistant</h3>
+          <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: '1.5' }}>
+            Real-time vocal conversation powered by Gemini Live Multimodal API with hands-free VAD and wave visualizer.
           </p>
         </div>
 
         <div
           className="card"
           onClick={() => onNavigate('chat')}
-          style={{ cursor: 'pointer', transition: 'border-color 0.2s ease', border: '1px solid var(--border-color)' }}
-          onMouseEnter={(e) => (e.currentTarget.style.borderColor = 'var(--accent-primary)')}
-          onMouseLeave={(e) => (e.currentTarget.style.borderColor = 'var(--border-color)')}
+          style={{ cursor: 'pointer', border: '1px solid rgba(16, 185, 129, 0.25)' }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
             <div style={{
-              width: '42px',
-              height: '42px',
-              borderRadius: '10px',
+              width: '46px',
+              height: '46px',
+              borderRadius: '14px',
               backgroundColor: 'rgba(16, 185, 129, 0.15)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              color: 'var(--success)'
+              color: '#34d399',
+              boxShadow: '0 4px 12px rgba(16, 185, 129, 0.25)',
             }}>
-              <MessageSquare size={22} />
+              <MessageSquare size={24} />
             </div>
             <span className="badge badge-success">RAG Grounded</span>
           </div>
-          <h3 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '6px' }}>Ask AI Replica</h3>
-          <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
-            Ask questions about past decisions, values, or memories with strict source citations.
+          <h3 style={{ fontSize: '17px', fontWeight: '700', marginBottom: '8px', color: '#fff' }}>Ask AI Replica</h3>
+          <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: '1.5' }}>
+            Query decisions, values, or memories with token-by-token live streaming and verified source citations.
           </p>
         </div>
 
         <div
           className="card"
-          onClick={() => onNavigate('voice')}
-          style={{ cursor: 'pointer', transition: 'border-color 0.2s ease', border: '1px solid var(--border-color)' }}
-          onMouseEnter={(e) => (e.currentTarget.style.borderColor = 'var(--accent-primary)')}
-          onMouseLeave={(e) => (e.currentTarget.style.borderColor = 'var(--border-color)')}
+          onClick={() => onNavigate('upload')}
+          style={{ cursor: 'pointer', border: '1px solid rgba(56, 189, 248, 0.25)' }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
             <div style={{
-              width: '42px',
-              height: '42px',
-              borderRadius: '10px',
-              backgroundColor: 'rgba(168, 85, 247, 0.15)',
+              width: '46px',
+              height: '46px',
+              borderRadius: '14px',
+              backgroundColor: 'rgba(56, 189, 248, 0.15)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              color: '#a855f7'
+              color: '#38bdf8',
+              boxShadow: '0 4px 12px rgba(56, 189, 248, 0.25)',
             }}>
-              <Mic size={22} />
+              <Upload size={24} />
             </div>
-            <span className="badge" style={{ backgroundColor: 'rgba(168, 85, 247, 0.15)', color: '#a855f7' }}>Live Audio</span>
+            <span className="badge badge-info">PDF & TXT</span>
           </div>
-          <h3 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '6px' }}>Voice Assistant</h3>
-          <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
-            Real-time vocal conversation powered by Gemini Live API with automatic fallback.
+          <h3 style={{ fontSize: '17px', fontWeight: '700', marginBottom: '8px', color: '#fff' }}>Upload Journal</h3>
+          <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: '1.5' }}>
+            Ingest personal diaries, memoirs, letters, or PDF records into semantic vector chunks automatically.
           </p>
         </div>
       </div>
@@ -152,53 +223,62 @@ export default function DashboardPage({ onNavigate }) {
         {/* Recent Memories */}
         <div className="card">
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <BookOpen size={20} color="var(--accent-primary)" />
-              <h3 style={{ fontSize: '17px', fontWeight: '700' }}>Stored Memories ({totalMemories})</h3>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <BookOpen size={20} color="#818cf8" />
+              <h3 style={{ fontSize: '17px', fontWeight: '700', color: '#fff' }}>Stored Memories ({totalMemories})</h3>
             </div>
             <button
               className="btn btn-secondary btn-sm"
               onClick={() => onNavigate('library')}
             >
-              View Library <ArrowRight size={14} />
+              View All <ArrowRight size={14} />
             </button>
           </div>
 
           {loading ? (
             <p style={{ color: 'var(--text-muted)', fontSize: '13px' }}>Loading memory archive...</p>
           ) : recentMemories.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '30px 10px', color: 'var(--text-muted)' }}>
+            <div style={{ textAlign: 'center', padding: '36px 10px', color: 'var(--text-muted)' }}>
               <FileText size={36} style={{ margin: '0 auto 12px', opacity: 0.5 }} />
-              <p style={{ fontSize: '14px', marginBottom: '12px' }}>No memories recorded yet.</p>
+              <p style={{ fontSize: '14px', marginBottom: '14px' }}>No memories recorded yet.</p>
               <button className="btn btn-primary btn-sm" onClick={() => onNavigate('library')}>
                 <PlusCircle size={14} /> Add First Memory
               </button>
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               {recentMemories.map((mem) => (
                 <div
                   key={mem.id}
                   onClick={() => onNavigate('memory-detail', { memoryId: mem.id })}
                   style={{
-                    padding: '12px 14px',
-                    borderRadius: 'var(--radius-sm)',
-                    backgroundColor: 'var(--bg-primary)',
+                    padding: '14px 16px',
+                    borderRadius: '12px',
+                    backgroundColor: 'rgba(15, 23, 42, 0.6)',
                     border: '1px solid var(--border-color)',
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'space-between'
+                    justifyContent: 'space-between',
+                    transition: 'all 0.15s ease',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = 'rgba(99, 102, 241, 0.4)';
+                    e.currentTarget.style.backgroundColor = 'rgba(15, 23, 42, 0.9)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = 'var(--border-color)';
+                    e.currentTarget.style.backgroundColor = 'rgba(15, 23, 42, 0.6)';
                   }}
                 >
                   <div>
-                    <h4 style={{ fontSize: '14px', fontWeight: '600' }}>{mem.title}</h4>
+                    <h4 style={{ fontSize: '14px', fontWeight: '700', color: '#fff' }}>{mem.title}</h4>
                     <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
                       {mem.category || 'General'} • {new Date(mem.created_at).toLocaleDateString()}
                     </span>
                   </div>
                   <span className="badge badge-info" style={{ textTransform: 'capitalize' }}>
-                    {mem.memory_type || 'episodic'}
+                    {mem.verification_status || 'unverified'}
                   </span>
                 </div>
               ))}
@@ -209,56 +289,63 @@ export default function DashboardPage({ onNavigate }) {
         {/* Recent Conversations */}
         <div className="card">
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Clock size={20} color="var(--success)" />
-              <h3 style={{ fontSize: '17px', fontWeight: '700' }}>Recent Conversations</h3>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <MessageSquare size={20} color="#34d399" />
+              <h3 style={{ fontSize: '17px', fontWeight: '700', color: '#fff' }}>Conversations ({recentConversations.length})</h3>
             </div>
             <button
               className="btn btn-secondary btn-sm"
               onClick={() => onNavigate('chat')}
             >
-              Start New Chat <PlusCircle size={14} />
+              Open Chat <ArrowRight size={14} />
             </button>
           </div>
 
           {loading ? (
-            <p style={{ color: 'var(--text-muted)', fontSize: '13px' }}>Loading conversation history...</p>
+            <p style={{ color: 'var(--text-muted)', fontSize: '13px' }}>Loading conversations...</p>
           ) : recentConversations.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '30px 10px', color: 'var(--text-muted)' }}>
-              <MessageSquare size={36} style={{ margin: '0 auto 12px', opacity: 0.5 }} />
-              <p style={{ fontSize: '14px', marginBottom: '12px' }}>No chat conversations yet.</p>
+            <div style={{ textAlign: 'center', padding: '36px 10px', color: 'var(--text-muted)' }}>
+              <Clock size={36} style={{ margin: '0 auto 12px', opacity: 0.5 }} />
+              <p style={{ fontSize: '14px', marginBottom: '14px' }}>No chat conversations yet.</p>
               <button className="btn btn-primary btn-sm" onClick={() => onNavigate('chat')}>
-                Start First Conversation
+                <MessageSquare size={14} /> Start First Chat
               </button>
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {recentConversations.map((c) => (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {recentConversations.map((convo) => (
                 <div
-                  key={c.id}
-                  onClick={() => onNavigate('chat', { conversationId: c.id })}
+                  key={convo.id}
+                  onClick={() => onNavigate('chat', { conversationId: convo.id })}
                   style={{
-                    padding: '12px 14px',
-                    borderRadius: 'var(--radius-sm)',
-                    backgroundColor: 'var(--bg-primary)',
+                    padding: '14px 16px',
+                    borderRadius: '12px',
+                    backgroundColor: 'rgba(15, 23, 42, 0.6)',
                     border: '1px solid var(--border-color)',
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'space-between'
+                    justifyContent: 'space-between',
+                    transition: 'all 0.15s ease',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = 'rgba(16, 185, 129, 0.4)';
+                    e.currentTarget.style.backgroundColor = 'rgba(15, 23, 42, 0.9)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = 'var(--border-color)';
+                    e.currentTarget.style.backgroundColor = 'rgba(15, 23, 42, 0.6)';
                   }}
                 >
-                  <div style={{ overflow: 'hidden' }}>
-                    <h4 style={{ fontSize: '14px', fontWeight: '600', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {c.title}
+                  <div style={{ overflow: 'hidden', paddingRight: '10px' }}>
+                    <h4 style={{ fontSize: '14px', fontWeight: '700', color: '#fff', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                      {convo.title}
                     </h4>
                     <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                      {new Date(c.updated_at).toLocaleString()}
+                      {convo.message_count || 0} messages • {new Date(convo.updated_at).toLocaleDateString()}
                     </span>
                   </div>
-                  <span className="badge badge-info">
-                    {c.message_count || 0} msgs
-                  </span>
+                  <ArrowRight size={16} color="var(--text-muted)" />
                 </div>
               ))}
             </div>
@@ -268,4 +355,3 @@ export default function DashboardPage({ onNavigate }) {
     </div>
   );
 }
-

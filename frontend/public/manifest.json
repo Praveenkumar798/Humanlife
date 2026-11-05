@@ -1,0 +1,19 @@
+{
+  "name": "Human Legacy AI — Memory Assistant",
+  "short_name": "HumanLegacy",
+  "description": "Evidence-grounded personal memory preservation assistant and cognitive replica powered by RAG and Gemini Live Voice.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0f1d",
+  "theme_color": "#0a0f1d",
+  "orientation": "portrait-primary",
+  "categories": ["lifestyle", "productivity", "utilities"],
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

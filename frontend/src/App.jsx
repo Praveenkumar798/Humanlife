@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useAuth } from './context/AuthContext';
 import Sidebar from './components/Sidebar';
+import MobileNav from './components/MobileNav';
+import PwaInstallBanner from './components/PwaInstallBanner';
 import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
@@ -94,6 +96,8 @@ export default function App() {
         {activeTab === 'voice' && <VoicePage onNavigate={navigateTo} />}
         {activeTab === 'settings' && <SettingsPage onNavigate={navigateTo} />}
       </main>
+      <MobileNav activeTab={activeTab} setActiveTab={setActiveTab} />
+      <PwaInstallBanner />
     </div>
   );
 }

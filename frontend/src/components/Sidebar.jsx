@@ -8,6 +8,7 @@ import {
   Settings,
   LogOut,
   BrainCircuit,
+  Sparkles,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -19,43 +20,59 @@ export default function Sidebar({ activeTab, setActiveTab }) {
     { id: 'library', label: 'Memory Library', icon: BookOpen },
     { id: 'upload', label: 'Upload Documents', icon: Upload },
     { id: 'chat', label: 'AI Text Chat', icon: MessageSquare },
-    { id: 'voice', label: 'Voice Assistant', icon: Mic },
+    { id: 'voice', label: 'Voice Assistant', icon: Mic, badge: 'Live' },
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
 
   return (
-    <aside style={{
-      width: '260px',
-      backgroundColor: 'var(--bg-secondary)',
-      borderRight: '1px solid var(--border-color)',
-      display: 'flex',
-      flexDirection: 'column',
-      justifyContent: 'space-between',
-      padding: '24px 16px',
-    }}>
+    <aside
+      className="sidebar-desktop"
+      style={{
+        width: '270px',
+        backgroundColor: 'rgba(15, 23, 42, 0.75)',
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
+        borderRight: '1px solid var(--border-color)',
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'space-between',
+        padding: '28px 18px',
+        zIndex: 50,
+      }}
+    >
       <div>
         {/* Brand */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '0 8px 24px', borderBottom: '1px solid var(--border-color)' }}>
-          <div style={{
-            width: '38px',
-            height: '38px',
-            borderRadius: '8px',
-            backgroundColor: 'var(--accent-primary)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: '#fff'
-          }}>
-            <BrainCircuit size={22} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '0 8px 24px', borderBottom: '1px solid var(--border-color)' }}>
+          <div
+            style={{
+              width: '42px',
+              height: '42px',
+              borderRadius: '12px',
+              background: 'var(--gradient-brand)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#fff',
+              boxShadow: '0 6px 18px rgba(99, 102, 241, 0.4)',
+              flexShrink: 0,
+            }}
+          >
+            <BrainCircuit size={24} />
           </div>
           <div>
-            <h2 style={{ fontSize: '16px', fontWeight: '700', letterSpacing: '-0.3px' }}>Human Legacy</h2>
-            <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>AI Memory Replica</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <h2 style={{ fontSize: '17px', fontWeight: '800', letterSpacing: '-0.4px', color: '#fff' }}>
+                Human Legacy
+              </h2>
+            </div>
+            <span style={{ fontSize: '11px', fontWeight: '600', color: '#818cf8', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <Sparkles size={10} /> AI Cognitive Replica
+            </span>
           </div>
         </div>
 
         {/* Navigation Links */}
-        <nav style={{ marginTop: '20px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+        <nav style={{ marginTop: '24px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = activeTab === item.id;
@@ -66,20 +83,51 @@ export default function Sidebar({ activeTab, setActiveTab }) {
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '12px',
+                  justifyContent: 'space-between',
                   padding: '12px 14px',
-                  borderRadius: 'var(--radius-sm)',
+                  borderRadius: '10px',
                   color: isActive ? '#ffffff' : 'var(--text-secondary)',
-                  backgroundColor: isActive ? 'var(--accent-primary)' : 'transparent',
-                  fontWeight: isActive ? '600' : '500',
+                  backgroundColor: isActive ? 'rgba(99, 102, 241, 0.2)' : 'transparent',
+                  border: isActive ? '1px solid rgba(99, 102, 241, 0.4)' : '1px solid transparent',
+                  boxShadow: isActive ? '0 4px 14px rgba(99, 102, 241, 0.2)' : 'none',
+                  fontWeight: isActive ? '700' : '500',
                   fontSize: '14px',
                   textAlign: 'left',
                   width: '100%',
-                  transition: 'all 0.15s ease',
+                  transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                }}
+                onMouseEnter={(e) => {
+                  if (!isActive) {
+                    e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.05)';
+                    e.currentTarget.style.color = '#fff';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!isActive) {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                    e.currentTarget.style.color = 'var(--text-secondary)';
+                  }
                 }}
               >
-                <Icon size={18} />
-                <span>{item.label}</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <Icon size={19} color={isActive ? '#818cf8' : 'currentColor'} />
+                  <span>{item.label}</span>
+                </div>
+                {item.badge && (
+                  <span
+                    style={{
+                      fontSize: '10px',
+                      fontWeight: '700',
+                      padding: '2px 8px',
+                      borderRadius: '9999px',
+                      background: 'rgba(16, 185, 129, 0.2)',
+                      color: '#34d399',
+                      border: '1px solid rgba(16, 185, 129, 0.3)',
+                    }}
+                  >
+                    {item.badge}
+                  </span>
+                )}
               </button>
             );
           })}
@@ -87,15 +135,17 @@ export default function Sidebar({ activeTab, setActiveTab }) {
       </div>
 
       {/* User Footer & Logout */}
-      <div style={{
-        paddingTop: '16px',
-        borderTop: '1px solid var(--border-color)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between'
-      }}>
-        <div style={{ overflow: 'hidden' }}>
-          <div style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-primary)', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+      <div
+        style={{
+          paddingTop: '18px',
+          borderTop: '1px solid var(--border-color)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+        }}
+      >
+        <div style={{ overflow: 'hidden', paddingRight: '8px' }}>
+          <div style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-primary)', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
             {user?.full_name || user?.username}
           </div>
           <div style={{ fontSize: '11px', color: 'var(--text-muted)', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
@@ -108,13 +158,20 @@ export default function Sidebar({ activeTab, setActiveTab }) {
           style={{
             padding: '8px',
             color: 'var(--text-muted)',
-            borderRadius: 'var(--radius-sm)',
+            borderRadius: '8px',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center'
+            justifyContent: 'center',
+            transition: 'all 0.15s ease',
           }}
-          onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--danger)')}
-          onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-muted)')}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.color = 'var(--danger)';
+            e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.1)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.color = 'var(--text-muted)';
+            e.currentTarget.style.backgroundColor = 'transparent';
+          }}
         >
           <LogOut size={18} />
         </button>
@@ -122,4 +179,3 @@ export default function Sidebar({ activeTab, setActiveTab }) {
     </aside>
   );
 }
-
