@@ -39,6 +39,12 @@ export default function UploadPage({ onNavigate }) {
         setPreviewUrl(null);
         return;
       }
+      if (selected.size > 50 * 1024 * 1024) {
+        setError('File size exceeds the 50MB limit. Please choose a file under 50MB.');
+        setFile(null);
+        setPreviewUrl(null);
+        return;
+      }
       setError('');
       setFile(selected);
 
@@ -86,7 +92,11 @@ export default function UploadPage({ onNavigate }) {
         setJobStatus(statusData);
       }
     } catch (err) {
-      setError(err.message || 'File upload failed. Please try again.');
+      if (err.status === 413 || err.message?.includes('413')) {
+        setError('File is too large for upload. The maximum allowed file size is 50MB.');
+      } else {
+        setError(err.message || 'File upload failed. Please try again.');
+      }
     } finally {
       setUploading(false);
     }
