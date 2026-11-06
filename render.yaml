@@ -1,0 +1,53 @@
+# =============================================================================
+# Human Legacy AI - Render Blueprint (render.yaml)
+# Auto-provisions PostgreSQL with pgvector and Docker Web Service in 1 click
+# =============================================================================
+
+services:
+  # 1. Full-Stack Web Service (FastAPI + Embedded React Frontend SPA)
+  - type: web
+    name: humanlife
+    runtime: docker
+    dockerfilePath: Dockerfile
+    dockerContext: .
+    plan: free
+    region: oregon
+    healthCheckPath: /health
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: "false"
+      - key: PORT
+        value: 8000
+      - key: DATABASE_URL
+        fromDatabase:
+          name: humanlife-db
+          property: connectionString
+      - key: DATABASE_URL_SYNC
+        fromDatabase:
+          name: humanlife-db
+          property: connectionString
+      - key: JWT_SECRET_KEY
+        generateValue: true
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_LLM_MODEL
+        value: gemini-3.5-flash-lite
+      - key: GEMINI_EMBEDDING_MODEL
+        value: gemini-embedding-001
+      - key: GEMINI_LIVE_MODEL
+        value: gemini-3.1-flash-live-preview
+      - key: CORS_ORIGINS
+        value: "*"
+      - key: MAX_UPLOAD_SIZE_MB
+        value: 50
+
+databases:
+  # 2. Managed PostgreSQL 16 Database (with pgvector support)
+  - name: humanlife-db
+    databaseName: humanlegacy_db
+    user: humanlegacy
+    plan: free
+    region: oregon
+    postgresMajorVersion: 16

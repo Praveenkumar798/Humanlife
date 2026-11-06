@@ -55,6 +55,26 @@ class Settings(BaseSettings):
         return [origin.strip() for origin in self.CORS_ORIGINS.split(",")]
 
     @property
+    def async_database_url(self) -> str:
+        """Ensure DATABASE_URL uses the asyncpg driver across all cloud hosting providers."""
+        url = self.DATABASE_URL
+        if url.startswith("postgres://"):
+            url = url.replace("postgres://", "postgresql+asyncpg://", 1)
+        elif url.startswith("postgresql://") and "+asyncpg" not in url:
+            url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
+        return url
+
+    @property
+    def sync_database_url(self) -> str:
+        """Ensure DATABASE_URL_SYNC uses the psycopg2 driver across all cloud hosting providers."""
+        url = self.DATABASE_URL_SYNC or self.DATABASE_URL
+        if url.startswith("postgres://"):
+            url = url.replace("postgres://", "postgresql+psycopg2://", 1)
+        elif url.startswith("postgresql://") and "+psycopg2" not in url:
+            url = url.replace("postgresql://", "postgresql+psycopg2://", 1)
+        return url
+
+    @property
     def max_upload_size_bytes(self) -> int:
         """Convert MB to bytes for file upload validation."""
         return self.MAX_UPLOAD_SIZE_MB * 1024 * 1024

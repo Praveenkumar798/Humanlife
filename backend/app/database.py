@@ -11,12 +11,12 @@ from app.config import settings
 
 # Async engine for PostgreSQL
 engine = create_async_engine(
-    settings.DATABASE_URL,
+    settings.async_database_url,
     echo=settings.APP_DEBUG,
     pool_size=10,
     max_overflow=20,
     pool_pre_ping=True,
-    connect_args={"command_timeout": 5, "timeout": 5} if "asyncpg" in settings.DATABASE_URL else {},
+    connect_args={"command_timeout": 5, "timeout": 5} if "asyncpg" in settings.async_database_url else {},
 )
 
 # Async session factory

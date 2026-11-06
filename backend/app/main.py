@@ -69,14 +69,41 @@ app.include_router(export.router)
 app.include_router(family.router)
 app.include_router(podcast.router)
 
+import os
+from fastapi import HTTPException
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 
-@app.get("/")
-async def root():
-    """Root endpoint - application info."""
-    return {
-        "app": "Human Legacy AI",
-        "version": "1.0.0",
-        "description": "Personalized Memory Assistant",
-        "docs": "/docs",
-    }
+# Check if production frontend static build exists (for single-container cloud hosting on Render)
+STATIC_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "static")
+
+if os.path.exists(STATIC_DIR):
+    assets_dir = os.path.join(STATIC_DIR, "assets")
+    if os.path.exists(assets_dir):
+        app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")
+
+    @app.get("/{full_path:path}")
+    async def serve_spa(full_path: str):
+        # Do not intercept API, WebSocket, or documentation endpoints
+        if (
+            full_path.startswith("api/")
+            or full_path.startswith("ws/")
+            or full_path.startswith("docs")
+            or full_path == "openapi.json"
+        ):
+            raise HTTPException(status_code=404, detail="Not Found")
+        file_path = os.path.join(STATIC_DIR, full_path)
+        if os.path.exists(file_path) and os.path.isfile(file_path):
+            return FileResponse(file_path)
+        return FileResponse(os.path.join(STATIC_DIR, "index.html"))
+else:
+    @app.get("/")
+    async def root():
+        """Root endpoint - application info."""
+        return {
+            "app": "Human Legacy AI",
+            "version": "1.0.0",
+            "description": "Personalized Memory Assistant",
+            "docs": "/docs",
+        }
 
