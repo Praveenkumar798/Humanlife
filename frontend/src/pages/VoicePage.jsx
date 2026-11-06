@@ -34,6 +34,7 @@ export default function VoicePage({ onNavigate }) {
   // VAD & Voice Polish States
   const [isVadEnabled, setIsVadEnabled] = useState(true);
   const [vadSensitivity, setVadSensitivity] = useState('medium'); // 'low' | 'medium' | 'high'
+  const [selectedLang, setSelectedLang] = useState('auto'); // 'auto' | 'te-IN' | 'hi-IN' | 'en-US'
   const [audioLevel, setAudioLevel] = useState(0); // 0-100 meter
   const [silenceCountdown, setSilenceCountdown] = useState(null); // countdown seconds until auto-send
   const [activeAnalyser, setActiveAnalyser] = useState(null);
@@ -209,7 +210,14 @@ export default function VoicePage({ onNavigate }) {
     }
   };
 
-  // Browser SpeechSynthesis Native Playback (Fallback TTS)
+  // Detect language of text for accurate Indic SpeechSynthesis voice selection
+  const detectLanguage = (text) => {
+    if (/[\u0C00-\u0C7F]/.test(text)) return 'te-IN'; // Telugu Unicode block
+    if (/[\u0900-\u097F]/.test(text)) return 'hi-IN'; // Devanagari / Hindi Unicode block
+    return 'en-US';
+  };
+
+  // Browser SpeechSynthesis Native Playback (Fallback TTS) with Telugu, Hindi & English
   const speakWithBrowserTTS = (textToSpeak) => {
     if (!('speechSynthesis' in window)) {
       setVoiceState('idle');
@@ -220,12 +228,30 @@ export default function VoicePage({ onNavigate }) {
     utterance.rate = 1.0;
     utterance.pitch = 1.0;
 
+    const targetLang = selectedLang !== 'auto' ? selectedLang : detectLanguage(textToSpeak);
     const voices = window.speechSynthesis.getVoices();
-    const preferredVoice = voices.find(
-      (v) => v.lang.startsWith('en') && (v.name.includes('Natural') || v.name.includes('Google') || v.name.includes('Samantha'))
-    );
-    if (preferredVoice) {
-      utterance.voice = preferredVoice;
+
+    let matchedVoice = null;
+    if (targetLang.startsWith('te')) {
+      utterance.lang = 'te-IN';
+      matchedVoice = voices.find(
+        (v) => v.lang.startsWith('te') || v.lang === 'te-IN' || v.name.toLowerCase().includes('telugu')
+      );
+    } else if (targetLang.startsWith('hi')) {
+      utterance.lang = 'hi-IN';
+      matchedVoice = voices.find(
+        (v) => v.lang.startsWith('hi') || v.lang === 'hi-IN' || v.name.toLowerCase().includes('hindi')
+      );
+    } else {
+      utterance.lang = 'en-US';
+      matchedVoice = voices.find(
+        (v) => (v.lang.startsWith('en-IN') || v.lang.startsWith('en')) &&
+               (v.name.includes('Natural') || v.name.includes('Google') || v.name.includes('Samantha') || v.name.includes('David'))
+      );
+    }
+
+    if (matchedVoice) {
+      utterance.voice = matchedVoice;
     }
 
     setVoiceState('speaking');
@@ -275,7 +301,12 @@ export default function VoicePage({ onNavigate }) {
 
       ws.onopen = () => {
         setVoiceState('listening');
-        setTranscript('Connected to Gemini Live. Speak naturally about your memories.');
+        const welcomeMsg = selectedLang === 'te-IN'
+          ? 'Gemini Live కనెక్ట్ అయింది. మీ జ్ఞాపకాల గురించి తెలుగులో మాట్లాడండి.'
+          : selectedLang === 'hi-IN'
+          ? 'Gemini Live कनेक्ट हो गया है। अपनी यादों के बारे में हिंदी में बोलें।'
+          : 'Connected to Gemini Live. Speak naturally in Telugu, Hindi, or English.';
+        setTranscript(welcomeMsg);
 
         const AudioContextClass = window.AudioContext || window.webkitAudioContext;
         const audioCtx = new AudioContextClass({ sampleRate: 16000 });
@@ -490,9 +521,13 @@ export default function VoicePage({ onNavigate }) {
       mediaRecorder.start();
       setVoiceState('listening');
       setTranscript(
-        isVadEnabled
-          ? 'Listening... speak your question. System will automatically detect when you finish speaking.'
-          : 'Recording your voice question... Tap microphone again when finished.'
+        selectedLang === 'te-IN'
+          ? (isVadEnabled ? 'వినబడుతోంది... మీ జ్ఞాపకాల గురించి తెలుగులో ప్రశ్న అడగండి.' : 'రికార్డింగ్ అవుతోంది... మాట్లాడటం పూర్తయ్యాక మైక్ నొక్కండి.')
+          : selectedLang === 'hi-IN'
+          ? (isVadEnabled ? 'सुन रहा हूँ... अपनी यादों के बारे में हिंदी में सवाल पूछें।' : 'रिकॉर्डिंग जारी है... बोलने के बाद माइक दबाएं।')
+          : (isVadEnabled
+              ? 'Listening... speak your question in Telugu, Hindi, or English. System will detect silence.'
+              : 'Recording your voice question... Tap microphone again when finished.')
       );
     } catch (err) {
       setVoiceState('error');
@@ -626,6 +661,39 @@ export default function VoicePage({ onNavigate }) {
             🛡️ Fallback Mode (STT + RAG + TTS)
           </button>
         </div>
+
+        {/* Multilingual Selector (Telugu, Hindi, English) */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginTop: '14px', flexWrap: 'wrap' }}>
+          <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: '600' }}>Voice Language:</span>
+          {[
+            { id: 'auto', label: '🌐 Auto (Multilingual)' },
+            { id: 'te-IN', label: '🇮🇳 తెలుగు (Telugu)' },
+            { id: 'hi-IN', label: '🇮🇳 हिन्दी (Hindi)' },
+            { id: 'en-US', label: '🇬🇧 English' },
+          ].map((lang) => {
+            const isSelected = selectedLang === lang.id;
+            return (
+              <button
+                key={lang.id}
+                onClick={() => setSelectedLang(lang.id)}
+                style={{
+                  padding: '5px 14px',
+                  fontSize: '12px',
+                  fontWeight: isSelected ? '700' : '500',
+                  borderRadius: '9999px',
+                  border: isSelected ? '1px solid #818cf8' : '1px solid rgba(255, 255, 255, 0.1)',
+                  backgroundColor: isSelected ? 'rgba(99, 102, 241, 0.25)' : 'rgba(255, 255, 255, 0.05)',
+                  color: isSelected ? '#ffffff' : 'var(--text-secondary)',
+                  cursor: 'pointer',
+                  boxShadow: isSelected ? '0 0 12px rgba(99, 102, 241, 0.3)' : 'none',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                {lang.label}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {errorMessage && <div className="alert alert-danger">{errorMessage}</div>}
@@ -737,9 +805,46 @@ export default function VoicePage({ onNavigate }) {
 
         <p style={{ color: 'var(--text-secondary)', fontSize: '13px', maxWidth: '520px', lineHeight: '1.6', minHeight: '32px' }}>
           {transcript || (mode === 'live'
-            ? 'Speak naturally into your microphone. The AI replica will retrieve your memories and respond with grounded speech in real-time.'
-            : 'Ask a question about your memories. When you finish speaking, VAD will automatically transcribe, search memories, and speak back.')}
+            ? 'Speak naturally into your microphone in Telugu, Hindi, or English. The AI replica responds in that same language.'
+            : 'Ask a question in Telugu, Hindi, or English. When you pause, VAD transcribes, queries memories, and speaks back in your language.')}
         </p>
+
+        {/* Suggested Voice Questions */}
+        {!answer && voiceState === 'idle' && (
+          <div style={{ marginTop: '14px', width: '100%', maxWidth: '640px' }}>
+            <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: '8px' }}>
+              Suggested questions to ask:
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', justifyContent: 'center' }}>
+              {[
+                { text: 'మీ చిన్ననాటి జ్ఞాపకాలు చెప్పండి', lang: 'te-IN', tag: 'తెలుగు' },
+                { text: 'మీ జీవితంలో ముఖ్యమైన నిర్ణయం ఏమిటి?', lang: 'te-IN', tag: 'తెలుగు' },
+                { text: 'अपने बचपन की सबसे खास याद बताइए', lang: 'hi-IN', tag: 'हिन्दी' },
+                { text: 'आपके जीवन की सबसे बड़ी सीख क्या है?', lang: 'hi-IN', tag: 'हिन्दी' },
+                { text: 'What were your most cherished values?', lang: 'en-US', tag: 'English' },
+              ].map((sugg, i) => (
+                <button
+                  key={i}
+                  className="btn btn-secondary btn-sm"
+                  style={{
+                    fontSize: '12px',
+                    padding: '5px 12px',
+                    borderRadius: '12px',
+                    background: 'rgba(255, 255, 255, 0.04)',
+                    borderColor: 'rgba(255, 255, 255, 0.1)',
+                  }}
+                  onClick={() => {
+                    setSelectedLang(sugg.lang);
+                    setTranscript(sugg.text);
+                  }}
+                >
+                  <span style={{ fontSize: '10px', color: '#818cf8', fontWeight: '700', marginRight: '6px' }}>[{sugg.tag}]</span>
+                  "{sugg.text}"
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Spoken Answer Text */}
         {answer && (

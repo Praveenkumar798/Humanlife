@@ -39,6 +39,7 @@ export default function BiographerPage({ onNavigate }) {
   // Spoken / Written Response State
   const [rawAnswer, setRawAnswer] = useState('');
   const [isRecording, setIsRecording] = useState(false);
+  const [dictationLang, setDictationLang] = useState('te-IN'); // 'te-IN' | 'hi-IN' | 'en-US'
   const [speechSupported, setSpeechSupported] = useState(true);
   const [isSpeakingQuestion, setIsSpeakingQuestion] = useState(false);
 
@@ -171,6 +172,7 @@ export default function BiographerPage({ onNavigate }) {
       setIsRecording(false);
     } else {
       try {
+        recognitionRef.current.lang = dictationLang;
         recognitionRef.current.start();
         setIsRecording(true);
       } catch (err) {
@@ -442,6 +444,33 @@ export default function BiographerPage({ onNavigate }) {
               {isRecording ? <MicOff size={16} /> : <Mic size={16} />}
               <span>{isRecording ? 'Stop Recording' : 'Speak via Mic'}</span>
             </button>
+
+            {/* Language Selector for Speech-to-Text */}
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', backgroundColor: 'rgba(255, 255, 255, 0.05)', padding: '3px 6px', borderRadius: '10px', border: '1px solid rgba(255, 255, 255, 0.1)' }}>
+              {[
+                { id: 'te-IN', label: 'తెలుగు' },
+                { id: 'hi-IN', label: 'हिन्दी' },
+                { id: 'en-US', label: 'English' },
+              ].map((l) => (
+                <button
+                  key={l.id}
+                  type="button"
+                  onClick={() => setDictationLang(l.id)}
+                  style={{
+                    padding: '3px 8px',
+                    fontSize: '11px',
+                    fontWeight: dictationLang === l.id ? '700' : '500',
+                    borderRadius: '6px',
+                    border: 'none',
+                    cursor: 'pointer',
+                    backgroundColor: dictationLang === l.id ? 'rgba(99, 102, 241, 0.35)' : 'transparent',
+                    color: dictationLang === l.id ? '#fff' : 'var(--text-muted)',
+                  }}
+                >
+                  {l.label}
+                </button>
+              ))}
+            </div>
 
             {isRecording && (
               <span style={{ fontSize: '13px', color: '#ef4444', display: 'flex', alignItems: 'center', gap: '6px' }}>

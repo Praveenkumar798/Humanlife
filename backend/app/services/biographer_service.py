@@ -220,6 +220,7 @@ Here is their raw spoken/written response:
 "{cleaned_input}"
 
 Your task is to transform their raw thoughts into a deeply touching, articulate, first-person memoir narrative ("I remember...", "Looking back...").
+If the user's response is in Telugu, Hindi, or code-mixed language, craft the memoir title and narrative in that authentic language (Telugu or Hindi) with eloquent, touching expressions.
 Preserve all specific names, dates, emotions, and their authentic personality. Do NOT hallucinate false facts, but polish the flow and emotional resonance.
 
 Respond STRICTLY with a valid JSON object matching this schema:

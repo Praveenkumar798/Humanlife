@@ -36,8 +36,10 @@ async def transcribe_audio_bytes(audio_bytes: bytes, mime_type: str = "audio/web
     clean_mime = mime_type.split(";")[0].strip() if mime_type else "audio/webm"
 
     prompt = (
-        "You are an expert audio transcription engine. "
+        "You are an expert multilingual audio transcription engine. "
         "Listen to the following spoken audio clip and output verbatim what the speaker said. "
+        "The speaker may be speaking in Telugu, Hindi, English, or a mix of these languages. "
+        "Accurately transcribe in the exact spoken language. "
         "Do NOT add introductory text, conversational replies, or quotation marks. "
         "Output ONLY the transcribed words."
     )
@@ -81,7 +83,10 @@ async def synthesize_text_to_speech(
         client = get_gemini_client()
         response = client.models.generate_content(
             model=settings.GEMINI_LLM_MODEL,
-            contents=f"Read this aloud in a warm, thoughtful, natural speaking voice: {clean_text}",
+            contents=(
+                f"Read this aloud in an authentic, warm, natural speaking voice with fluent pronunciation "
+                f"for the language used (Telugu, Hindi, or English): {clean_text}"
+            ),
             config=types.GenerateContentConfig(
                 response_modalities=["AUDIO"],
                 speech_config=types.SpeechConfig(
