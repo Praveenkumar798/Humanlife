@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { BrainCircuit, ArrowRight } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import GoogleSignInButton from '../components/GoogleSignInButton';
 
 export default function RegisterPage({ onGoLogin, onRegisterSuccess }) {
   const { register } = useAuth();
@@ -56,6 +57,23 @@ export default function RegisterPage({ onGoLogin, onRegisterSuccess }) {
         </div>
 
         {error && <div className="alert alert-danger">{error}</div>}
+
+        <div style={{ marginBottom: '20px' }}>
+          <GoogleSignInButton onSuccess={onRegisterSuccess} width={388} text="signup_with" />
+        </div>
+
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px',
+          margin: '18px 0',
+          color: 'var(--text-muted)',
+          fontSize: '12px'
+        }}>
+          <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--border-color)' }} />
+          <span>OR REGISTER WITH EMAIL</span>
+          <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--border-color)' }} />
+        </div>
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <div>

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { BrainCircuit, Lock, Mail, ArrowRight } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import GoogleSignInButton from '../components/GoogleSignInButton';
 
 export default function LoginPage({ onGoRegister, onLoginSuccess }) {
   const { login } = useAuth();
@@ -48,6 +49,23 @@ export default function LoginPage({ onGoRegister, onLoginSuccess }) {
         </div>
 
         {error && <div className="alert alert-danger">{error}</div>}
+
+        <div style={{ marginBottom: '20px' }}>
+          <GoogleSignInButton onSuccess={onLoginSuccess} width={348} />
+        </div>
+
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px',
+          margin: '18px 0',
+          color: 'var(--text-muted)',
+          fontSize: '12px'
+        }}>
+          <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--border-color)' }} />
+          <span>OR CONTINUE WITH EMAIL</span>
+          <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--border-color)' }} />
+        </div>
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <div>

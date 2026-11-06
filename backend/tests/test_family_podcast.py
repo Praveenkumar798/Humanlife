@@ -8,8 +8,8 @@ and biographical audio memoir podcast production.
 import uuid
 from datetime import date, datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
-import pytest
-from fastapi import HTTPException
+import pytest  # type: ignore
+from fastapi import HTTPException  # type: ignore
 
 from app.models.user import User
 from app.models.memory import Memory

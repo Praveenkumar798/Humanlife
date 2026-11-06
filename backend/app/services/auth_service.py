@@ -125,3 +125,91 @@ async def authenticate_user(
 
     return user
 
+
+async def authenticate_google_user(
+    db: AsyncSession,
+    credential: str
+) -> User:
+    """
+    Authenticate or auto-register a user via Google One-Tap / Social Auth.
+    Verifies the Google ID token via Google's tokeninfo API.
+    """
+    import httpx
+    import secrets
+
+    # Verify ID token with Google's official endpoint
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.get(
+                "https://oauth2.googleapis.com/tokeninfo",
+                params={"id_token": credential}
+            )
+            if resp.status_code != 200:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Invalid or expired Google authentication credential."
+                )
+            payload = resp.json()
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Unable to verify Google credentials with Google servers: {str(e)}"
+        )
+
+    email = payload.get("email")
+    if not email:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Google account does not provide an email address."
+        )
+
+    email_lower = email.lower().strip()
+    full_name = payload.get("name")
+
+    # Check if user already exists by email
+    stmt = select(User).where(User.email == email_lower)
+    result = await db.execute(stmt)
+    user = result.scalar_one_or_none()
+
+    if user:
+        if not user.is_active:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="This account has been deactivated."
+            )
+        # Update full name if missing
+        if not user.full_name and full_name:
+            user.full_name = full_name
+            await db.commit()
+            await db.refresh(user)
+        return user
+
+    # Otherwise auto-create new user
+    base_name = email_lower.split("@")[0]
+    clean_username = "".join(c for c in base_name if c.isalnum() or c in ("_", "-"))[:25]
+    if len(clean_username) < 3:
+        clean_username = f"user_{secrets.token_hex(4)}"
+
+    # Ensure uniqueness of username
+    stmt_check = select(User).where(User.username == clean_username)
+    res_check = await db.execute(stmt_check)
+    if res_check.scalar_one_or_none():
+        clean_username = f"{clean_username[:18]}_{secrets.token_hex(3)}"
+
+    # Random high-entropy unguessable password
+    random_pwd = secrets.token_urlsafe(32)
+    new_user = User(
+        email=email_lower,
+        username=clean_username,
+        full_name=full_name or clean_username,
+        hashed_password=hash_password(random_pwd),
+        is_active=True,
+    )
+    db.add(new_user)
+    await db.commit()
+    await db.refresh(new_user)
+    return new_user
+
+

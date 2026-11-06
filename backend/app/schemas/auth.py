@@ -24,6 +24,12 @@ class UserLoginRequest(BaseModel):
     password: str = Field(..., min_length=1)
 
 
+class GoogleAuthRequest(BaseModel):
+    """Payload for Google OAuth / One-Tap authentication."""
+    credential: str = Field(..., min_length=10, description="Google ID Token JWT")
+
+
+
 class UserResponse(BaseModel):
     """Safe public user representation (no passwords or secrets)."""
     id: uuid.UUID

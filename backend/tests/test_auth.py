@@ -13,12 +13,13 @@ import pytest
 from fastapi import Response, Request, HTTPException
 
 from app.models.user import User
-from app.schemas.auth import UserRegisterRequest, UserLoginRequest
+from app.schemas.auth import UserRegisterRequest, UserLoginRequest, GoogleAuthRequest
 from app.services.auth_service import (
     hash_password,
     verify_password,
     create_access_token,
     decode_access_token,
+    authenticate_google_user,
 )
 from app.middleware.auth_middleware import (
     set_auth_cookie,
@@ -26,7 +27,7 @@ from app.middleware.auth_middleware import (
     get_current_user,
     COOKIE_NAME,
 )
-from app.routers.auth import register, login, logout, get_me
+from app.routers.auth import register, login, logout, get_me, google_auth
 
 
 def test_password_hashing_and_verification():
@@ -266,3 +267,31 @@ def test_get_me_endpoint():
     result = asyncio.run(get_me(current_user=current_user))
     assert result.email == "me@example.com"
     assert result.username == "meuser"
+
+
+def test_google_auth_endpoint_success(monkeypatch):
+    """Test /api/auth/google endpoint creates or retrieves a user and sets an auth cookie."""
+    mock_db = AsyncMock()
+    mock_response = MagicMock(spec=Response)
+
+    mock_user = User(
+        id=uuid.uuid4(),
+        email="googleuser@gmail.com",
+        username="googleuser",
+        full_name="Google User",
+        hashed_password="...",
+        is_active=True,
+    )
+
+    async def mock_auth_google(db, credential):
+        return mock_user
+
+    monkeypatch.setattr("app.routers.auth.authenticate_google_user", mock_auth_google)
+
+    data = GoogleAuthRequest(credential="mock_valid_google_jwt_token_12345")
+    result = asyncio.run(google_auth(data=data, response=mock_response, db=mock_db))
+
+    assert result.email == "googleuser@gmail.com"
+    assert result.username == "googleuser"
+    mock_response.set_cookie.assert_called_once()
+

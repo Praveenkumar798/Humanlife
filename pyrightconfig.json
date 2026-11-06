@@ -1,0 +1,11 @@
+{
+  "include": [
+    "backend"
+  ],
+  "extraPaths": [
+    "backend"
+  ],
+  "pythonPath": "C:\\Python314\\python.exe",
+  "reportMissingImports": "none"
+}
+

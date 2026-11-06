@@ -13,12 +13,14 @@ from app.models.user import User
 from app.schemas.auth import (
     UserRegisterRequest,
     UserLoginRequest,
+    GoogleAuthRequest,
     UserResponse,
     MessageResponse,
 )
 from app.services.auth_service import (
     register_user,
     authenticate_user,
+    authenticate_google_user,
     create_access_token,
 )
 from app.middleware.auth_middleware import (
@@ -52,6 +54,7 @@ async def register(
     return user
 
 
+
 @router.post(
     "/login",
     response_model=UserResponse,
@@ -81,6 +84,28 @@ async def login(
             detail="This account has been deactivated.",
         )
 
+    token = create_access_token(user.id)
+    set_auth_cookie(response, token)
+    return user
+
+
+@router.post(
+    "/google",
+    response_model=UserResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Authenticate or register via Google One-Tap / Social Auth"
+)
+async def google_auth(
+    data: GoogleAuthRequest,
+    response: Response,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Log into an existing account or automatically create a new user profile
+    using a verified Google ID credential token.
+    Sets a secure httpOnly cookie containing the access token.
+    """
+    user = await authenticate_google_user(db, data.credential)
     token = create_access_token(user.id)
     set_auth_cookie(response, token)
     return user
