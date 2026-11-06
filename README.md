@@ -18,7 +18,13 @@
 | **Stage 8** | WebSocket Real-Time Chat Streaming | ✅ Complete | `/ws/chat`, token-by-token streaming, live typing cursor |
 | **Stage 9** | Gemini Live API Voice Connection | ✅ Complete | `/ws/voice-live`, bidirectional 16kHz mic PCM streaming, 24kHz synthesized audio |
 | **Stage 10** | STT + RAG + TTS Voice Fallback | ✅ Complete | Multi-tiered fallback (`/api/voice/query`), hybrid Web Audio + SpeechSynthesis |
-| **Stage 11** | End-to-End Integration & Docker | ✅ Complete | 66 passing backend tests, production Docker Compose multi-container stack |
+| **Stage 11** | End-to-End Integration & Docker | ✅ Complete | 85 passing backend tests, production Docker Compose multi-container stack |
+| **Stage 12** | Interactive Timeline & Neural Mind Map | ✅ Complete | Chronological milestone spine & 60fps HTML5 Canvas physics node-graph |
+| **Stage 13** | AI Biographer Voice Interviewer | ✅ Complete | Oral history interviewer across 5 life eras, speech dictation & memoir synthesis |
+| **Stage 14** | Multimodal Photo & Diary Vision OCR | ✅ Complete | Gemini 2.5 Flash Vision OCR for cursive handwriting, vintage photos & letters |
+| **Stage 15** | Export Legacy Book Hardcover PDF | ✅ Complete | ReportLab book publishing engine, dynamic Table of Contents, NumberedCanvas |
+| **Stage 16** | Family Sharing & Audio Podcast | ✅ Complete | Cryptographic guest tribute portal, Gemini documentary podcast & cosmic vinyl player |
+| **Multilingual** | Telugu, Hindi & English Voice | ✅ Complete | Gemini Live native Telugu & Hindi fluency, Indic SpeechSynthesis auto-detection |
 
 ---
 
@@ -77,7 +83,7 @@ Open [http://localhost:5173](http://localhost:5173) in your browser.
 
 ---
 
-## 🧪 Automated Test Suite (66 Tests)
+## 🧪 Automated Test Suite (85 Tests Passing — 100% Green)
 
 Run the full backend test suite:
 ```bash
@@ -91,10 +97,13 @@ Verified test coverage across all subsystems:
 - `test_memories.py` (8 tests): Memory CRUD, ownership isolation, filtering, auto-chunk indexing.
 - `test_models.py` (5 tests): SQLAlchemy models, relationships, and metadata validation.
 - `test_rag.py` (7 tests): pgvector similarity search, prompt construction, grounding checks, citations.
-- `test_uploads.py` (9 tests): PDF/TXT text extraction, chunking sliding window, batch embeddings.
+- `test_uploads.py` (11 tests): PDF/TXT text extraction, image OCR, chunking sliding window, batch embeddings.
 - `test_websocket_chat.py` (6 tests): Handshake auth, ping/pong, real-time token streaming.
 - `test_websocket_voice.py` (7 tests): Voice handshake, Gemini Live config, audio/transcript flow, fallback signaling.
 - `test_voice_fallback.py` (8 tests): STT transcription, TTS synthesis, query pipeline, fallback endpoints.
+- `test_biographer.py` (8 tests): Curated life questions, interview synthesis, memory registration.
+- `test_export.py` (3 tests): ReportLab memoir book PDF generation, chapters, and dedication.
+- `test_family_podcast.py` (6 tests): Public share token, tribute retrieval, guest replica chat, audio podcast synthesis.
 - `test_e2e_integration.py` (1 test): Complete 13-step end-to-end user journey simulation.
 
 ---
