@@ -13,6 +13,7 @@ import {
   BrainCircuit,
   ShieldCheck,
   Zap,
+  Radio,
 } from 'lucide-react';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -100,6 +101,13 @@ export default function DashboardPage({ onNavigate }) {
               style={{ padding: '12px 22px', fontSize: '14px', background: 'rgba(99, 102, 241, 0.25)', border: '1px solid rgba(129, 140, 248, 0.4)', color: '#fff' }}
             >
               <Sparkles size={18} color="#c084fc" /> AI Biographer Interview
+            </button>
+            <button
+              className="btn btn-secondary"
+              onClick={() => onNavigate('family-podcast')}
+              style={{ padding: '12px 22px', fontSize: '14px', background: 'rgba(236, 72, 153, 0.2)', border: '1px solid rgba(244, 114, 182, 0.4)', color: '#fff' }}
+            >
+              <Radio size={18} color="#f472b6" /> Podcast & Family
             </button>
             <button
               className="btn btn-secondary"

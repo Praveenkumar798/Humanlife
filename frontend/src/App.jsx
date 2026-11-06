@@ -13,10 +13,19 @@ import UploadPage from './pages/UploadPage';
 import ChatPage from './pages/ChatPage';
 import VoicePage from './pages/VoicePage';
 import BiographerPage from './pages/BiographerPage';
+import PodcastFamilyPage from './pages/PodcastFamilyPage';
+import PublicLegacyPage from './pages/PublicLegacyPage';
 import SettingsPage from './pages/SettingsPage';
 
 export default function App() {
   const { user, loading } = useAuth();
+
+  // Handle public family share link without requiring login
+  const urlParams = new URLSearchParams(window.location.search);
+  const shareToken = urlParams.get('share');
+  if (shareToken) {
+    return <PublicLegacyPage shareToken={shareToken} />;
+  }
 
   // Navigation state for unauthenticated flow: 'landing', 'login', 'register'
   const [authView, setAuthView] = useState('landing');
@@ -96,6 +105,7 @@ export default function App() {
         )}
         {activeTab === 'voice' && <VoicePage onNavigate={navigateTo} />}
         {activeTab === 'biographer' && <BiographerPage onNavigate={navigateTo} />}
+        {activeTab === 'family-podcast' && <PodcastFamilyPage onNavigate={navigateTo} />}
         {activeTab === 'settings' && <SettingsPage onNavigate={navigateTo} />}
       </main>
       <MobileNav activeTab={activeTab} setActiveTab={setActiveTab} />

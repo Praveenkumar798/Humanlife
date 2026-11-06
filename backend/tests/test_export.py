@@ -133,3 +133,4 @@ async def test_download_memoir_pdf_endpoint(current_user, sample_memories):
     assert response.headers["Content-Type"] == "application/pdf"
     assert "attachment; filename=" in response.headers["Content-Disposition"]
     assert response.body.startswith(b"%PDF-")
+

@@ -160,5 +160,20 @@ export const api = {
       window.URL.revokeObjectURL(url);
     },
   },
+
+  // Family Sharing Portal
+  family: {
+    getShare: () => request('/api/family-shares', { method: 'GET' }),
+    createShare: (payload) => request('/api/family-shares', { method: 'POST', body: JSON.stringify(payload || {}) }),
+    updateShare: (token, payload) => request(`/api/family-shares/${token}`, { method: 'PUT', body: JSON.stringify(payload) }),
+    regenerateToken: (token) => request(`/api/family-shares/${token}/regenerate`, { method: 'POST' }),
+    getPublicProfile: (token) => request(`/api/public/legacy/${token}`, { method: 'GET' }),
+    publicChat: (token, payload) => request(`/api/public/legacy/${token}/chat`, { method: 'POST', body: JSON.stringify(payload) }),
+  },
+
+  // Audio Memoir Podcast
+  podcast: {
+    generate: (payload) => request('/api/podcast/generate', { method: 'POST', body: JSON.stringify(payload) }),
+  },
 };
 

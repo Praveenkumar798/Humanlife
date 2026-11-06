@@ -367,3 +367,4 @@ async def generate_memoir_book_pdf(
     doc.build(story, canvasmaker=NumberedCanvas)
     buffer.seek(0)
     return buffer.getvalue()
+
