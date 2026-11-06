@@ -55,3 +55,4 @@ class FamilyShare(Base):
 
     def __repr__(self) -> str:
         return f"<FamilyShare(id={self.id}, token={self.share_token}, active={self.is_active})>"
+

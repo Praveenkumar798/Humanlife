@@ -309,3 +309,4 @@ export default function PublicLegacyPage({ shareToken }) {
     </div>
   );
 }
+

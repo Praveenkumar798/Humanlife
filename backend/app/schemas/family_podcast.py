@@ -78,3 +78,4 @@ class AudioPodcastResponse(BaseModel):
     audio_base64: Optional[str] = None
     mime_type: str = "audio/wav"
     chapters_count: int = 0
+
