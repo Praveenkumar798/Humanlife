@@ -81,7 +81,8 @@ export default function ChatPage({ initialConversationId, onNavigate }) {
     setWsStatus('connecting');
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const host = window.location.hostname || 'localhost';
-    const wsUrl = `${protocol}//${host}:8000/ws/chat`;
+    const wsHost = window.location.port === '5173' ? `${host}:8000` : window.location.host;
+    const wsUrl = `${protocol}//${wsHost}/ws/chat`;
 
     try {
       const ws = new WebSocket(wsUrl);

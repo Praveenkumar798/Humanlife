@@ -294,7 +294,8 @@ export default function VoicePage({ onNavigate }) {
 
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
       const host = window.location.hostname || 'localhost';
-      const wsUrl = `${protocol}//${host}:8000/ws/voice-live`;
+      const wsHost = window.location.port === '5173' ? `${host}:8000` : window.location.host;
+      const wsUrl = `${protocol}//${wsHost}/ws/voice-live`;
 
       const ws = new WebSocket(wsUrl);
       wsRef.current = ws;
