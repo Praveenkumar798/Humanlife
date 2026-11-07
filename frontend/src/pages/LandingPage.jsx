@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import GoogleSignInButton from '../components/GoogleSignInButton';
 import AmbientVideoMotion from '../components/AmbientVideoMotion';
+import HeroVideoPlayer from '../components/HeroVideoPlayer';
 
 export default function LandingPage({ onGoLogin, onGoRegister }) {
   const [activeFaq, setActiveFaq] = useState(null);
@@ -261,7 +262,7 @@ export default function LandingPage({ onGoLogin, onGoRegister }) {
           gap: '24px',
           fontSize: '13px',
           color: 'var(--text-muted)',
-          marginBottom: '50px'
+          marginBottom: '40px'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <ShieldCheck size={16} color="var(--success)" />
@@ -281,7 +282,12 @@ export default function LandingPage({ onGoLogin, onGoRegister }) {
           </div>
         </div>
 
-        {/* 3. Interactive Hero Preview Mockup */}
+        {/* 3. Hero Video Motion Player */}
+        <div style={{ width: '100%', marginBottom: '40px' }}>
+          <HeroVideoPlayer onGetStarted={onGoRegister} />
+        </div>
+
+        {/* 4. Interactive Hero Preview Mockup */}
         <div style={{
           width: '100%',
           maxWidth: '980px',

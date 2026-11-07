@@ -1,8 +1,7 @@
 // Human Legacy AI - Service Worker
-const CACHE_NAME = 'humanlegacy-cache-v1';
+const CACHE_NAME = 'humanlegacy-cache-v3';
 const STATIC_ASSETS = [
   '/',
-  '/index.html',
   '/manifest.json',
   '/icon.svg',
 ];
@@ -39,6 +38,22 @@ self.addEventListener('fetch', (event) => {
     url.pathname.startsWith('/ws') ||
     event.request.method !== 'GET'
   ) {
+    return;
+  }
+
+  // Network-first for page navigations to always show the latest live deployment
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request)
+        .then((networkResponse) => {
+          if (networkResponse && networkResponse.status === 200) {
+            const copy = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+          }
+          return networkResponse;
+        })
+        .catch(() => caches.match(event.request).then((res) => res || caches.match('/')))
+    );
     return;
   }
 
